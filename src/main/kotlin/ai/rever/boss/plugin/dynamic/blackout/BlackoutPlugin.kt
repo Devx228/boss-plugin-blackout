@@ -17,7 +17,7 @@ object BlackoutTab : TabTypeInfo {
     override val typeId = TabTypeId("blackout", PLUGIN_ID)
     override val displayName = "BLACKOUT"
     override val icon = Icons.Default.FlashOn
-    override fun createTabInfo(id: String, context: NewTabContext): TabInfo = BlackoutInfo(id)
+    override fun createTabInfo(input: String, context: NewTabContext): TabInfo = BlackoutInfo(input)
 }
 
 data class BlackoutInfo(override val id: String) : TabInfo {

@@ -384,7 +384,7 @@ private fun OrderPanel(
     onCommit: () -> Unit
 ) {
     val public = view.public
-    val locked = view.humanOrder != null
+    val committed = view.humanOrder
     val output = view.agentOutput ?: Output.NORMAL
     val cost = Rules.cost(action, output)
     val affordable = cost <= public.blue.energy && !(action == Action.HOLD && output == Output.BOOST)
@@ -392,7 +392,7 @@ private fun OrderPanel(
     Panel(title = "COMBAT ORDER", accent = Ink.Cyan) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Action.entries.forEach { candidate ->
-                ActionChip(candidate, candidate == action, locked, output, Modifier.weight(1f)) { onAction(candidate) }
+                ActionChip(candidate, candidate == action, committed != null, output, Modifier.weight(1f)) { onAction(candidate) }
             }
         }
         Body(orderLine(action, target, route, needsTarget), Ink.Text)
@@ -406,15 +406,16 @@ private fun OrderPanel(
         }
         Button(
             onClick = onCommit,
-            enabled = !locked && affordable,
+            enabled = committed == null && affordable,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
-                backgroundColor = if (locked) Ink.Raised else Ink.Cyan,
-                contentColor = if (locked) Ink.Dim else Ink.Void
+                backgroundColor = if (committed != null) Ink.Raised else Ink.Cyan,
+                contentColor = if (committed != null) Ink.Dim else Ink.Void
             )
         ) {
             Text(
-                if (locked) "PILOT LOCKED: ${view.humanOrder?.action} ON ROUTE ${view.humanOrder?.route}" else "LOCK PILOT ORDER",
+                committed?.let { "PILOT LOCKED: ${it.action} ON ${it.target.label} VIA ROUTE ${it.route}" }
+                    ?: "LOCK PILOT ORDER",
                 fontWeight = FontWeight.Bold,
                 fontSize = 12.sp
             )

@@ -14,8 +14,8 @@ val apiJar = files(providers.gradleProperty("bossApiJar").getOrElse("libs/boss-p
 dependencies {
     compileOnly(apiJar)
     implementation(compose.desktop.currentOs)
-    implementation(compose.material)
-    implementation(compose.materialIconsExtended)
+    implementation("org.jetbrains.compose.material:material-desktop:1.10.0")
+    implementation("org.jetbrains.compose.material:material-icons-extended-desktop:1.7.3")
     implementation("com.arkivanov.decompose:decompose:3.3.0")
     implementation("com.arkivanov.essenty:lifecycle:2.5.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
@@ -41,6 +41,15 @@ tasks.register<JavaExec>("balanceReport") {
     mainClass.set("ai.rever.boss.plugin.dynamic.blackout.engine.BalanceKt")
 }
 tasks.register<JavaExec>("runPrototype") {
+    group = "application"
+    description = "Open the standalone Compose harness."
     classpath = sourceSets.main.get().runtimeClasspath + apiJar
     mainClass.set("ai.rever.boss.plugin.dynamic.blackout.PrototypeKt")
+}
+tasks.register<JavaExec>("smokeUi") {
+    group = "verification"
+    description = "Render the board headfully for a few seconds and exit, to prove it draws."
+    classpath = sourceSets.main.get().runtimeClasspath + apiJar
+    mainClass.set("ai.rever.boss.plugin.dynamic.blackout.PrototypeKt")
+    systemProperty("blackout.smokeSeconds", providers.gradleProperty("smokeSeconds").getOrElse("6"))
 }

@@ -180,7 +180,7 @@ class Match(private val seed: Long, private val clock: () -> Long = { System.nan
         return Replay(matchId = id, seed = seed, practice = practice, difficulty = difficulty,
             rounds = history.toList(), finalFrame = frame)
     }
-    @Synchronized fun replayJson(): String = Json { prettyPrint = true }.encodeToString(replay())
+    @Synchronized fun replayJson(): String = PRETTY.encodeToString(replay())
 
     private fun mutate(round: Int, requestId: String, payload: String, change: () -> String): Ack {
         if (!requestId.matches(Regex("[A-Za-z0-9_-]{1,64}"))) fail("INVALID_REQUEST_ID", "Use 1-64 letters, digits, _ or -.")
@@ -224,4 +224,8 @@ class Match(private val seed: Long, private val clock: () -> Long = { System.nan
         if (!finished()) rival = Rival.orders(seed, frame, difficulty)
     }
     private fun fail(code: String, message: String): Nothing = throw GameError(code, message)
+
+    private companion object {
+        val PRETTY = Json { prettyPrint = true }
+    }
 }
