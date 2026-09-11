@@ -1,0 +1,13 @@
+{
+  "manifestVersion": 1,
+  "pluginId": "ai.rever.boss.plugin.dynamic.blackout",
+  "displayName": "BLACKOUT: Rival Crews",
+  "version": "${version}",
+  "apiVersion": "1.0.87",
+  "mainClass": "ai.rever.boss.plugin.dynamic.blackout.BlackoutPlugin",
+  "type": "tab",
+  "description": "A human pilot and an AI engineer duel a rival station compartment by compartment.",
+  "author": "BLACKOUT contributors",
+  "isDynamic": true,
+  "canUnload": true
+}
