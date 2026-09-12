@@ -7,7 +7,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.3.0"
 }
 group = "ai.rever.boss.plugin.dynamic"
-version = "0.2.0"
+version = "0.3.0"
 repositories { google(); mavenCentral() }
 kotlin { jvmToolchain(17); compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
 val apiJar = files(providers.gradleProperty("bossApiJar").getOrElse("libs/boss-plugin-api-1.0.89.jar"))
@@ -34,12 +34,6 @@ tasks.register<Jar>("buildPluginJar") {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 tasks.build { dependsOn("buildPluginJar") }
-tasks.register<JavaExec>("balanceReport") {
-    group = "verification"
-    description = "Play scripted crew against scripted crew and print measured outcomes."
-    classpath = sourceSets.main.get().runtimeClasspath + apiJar
-    mainClass.set("ai.rever.boss.plugin.dynamic.blackout.engine.BalanceKt")
-}
 tasks.register<JavaExec>("runPrototype") {
     group = "application"
     description = "Open the standalone Compose harness."

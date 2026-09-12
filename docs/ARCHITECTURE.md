@@ -1,58 +1,32 @@
-# Structure
+# Layout
 
-```text
-src/main/kotlin/.../blackout/
-  engine/       Rules.kt      pure state, phases, seeded generation, victory
-                Rival.kt      scripted crew policies, playable as either side
-                Balance.kt    headless harness behind ./gradlew balanceReport
-  application/  Match.kt      round lifecycle, budgets, per-seat views, replay
-                Session.kt    the single local seat
-                EngineerCrew.kt  optional host-gateway agent in the engineer seat
-                Profile.kt    crew record and replay persistence
-  mcp/          BlackoutTools.kt  four versioned tools, shared with the gateway seat
-  ui/           Theme.kt      palette and shared panel primitives
-                CircuitArt.kt drawn power routes
-                StationArt.kt deck plan, compartments, grid meter
-                CrewConsole.kt engineer console and crew channel
-                BlackoutBoard.kt layout, briefing, order flow, result
-  BlackoutPlugin.kt  BOSS registration and disposal
-  Prototype.kt       standalone Compose harness
-src/test/kotlin/.../blackout/
-docs/
-prototype/rules-spike/   disposable Java spike, superseded
+```
+engine/Case.kt              Pure case generation. No Compose, no BOSS API, no I/O.
+                            Seeded, deterministic, and the only place the solution exists.
+
+application/Investigation.kt  One case in progress. Every boundary an agent can reach goes
+                              through here. Holds the clock, the walk budget, the channel
+                              and the verdict marks, and decides what each seat may see.
+application/Session.kt        One local pilot seat plus one archivist seat.
+application/Archivist.kt      Optional: drives the host AI gateway through the MCP tools.
+application/Profile.kt        Local logbook and case debriefs through plugin storage.
+
+mcp/BlackoutTools.kt        The four agent tools. Argument validation, error codes, and the
+                            gateway specs built from the same definitions.
+
+ui/Theme.kt                 Seven colours, one accent, three type sizes.
+ui/StationMap.kt            The blueprint map. Line work on Canvas, berths as composables.
+ui/BlackoutBoard.kt         The board: opening screen, map, findings, channel, overlays.
+
+BlackoutPlugin.kt           Registration, tab type, lifecycle.
+Prototype.kt                Standalone Compose harness, no BOSS required.
 ```
 
-## Dependency direction
+## The one rule
 
-`engine` depends on nothing but kotlinx-serialization. It has no Compose, no BOSS API and
-no model-provider types, so it can move behind a match service later without edits.
+`engine/Case.kt` holds the answer. `Investigation` is the only thing that reads it, and it
+never lets a physical state, a map coordinate or the solution reach an archivist view. The
+tests in `InvestigationTest` and `ToolsTest` serialize those views and assert it.
 
-`application` depends on `engine` and, only in `EngineerCrew`, on the BOSS AI gateway types.
-`ui` depends on `application` and `engine`. `mcp` depends on `application`.
-
-## The seat boundary
-
-`Match` is the only place command boundaries serialize. Three views come out of it:
-
-- `humanView()` carries the route map, the pilot's own deck in full, the rival deck as
-  coarse status, and whether the engineer has locked.
-- `observe()` carries the full sensor sweep of both decks, the bus condition and the scan,
-  and no route map at all.
-- `replay()` carries every round's orders and frames, and no crew messages.
-
-Anything that widens one of these views is a game design change, not a convenience.
-
-## The tool surface
-
-`BlackoutTools.tools()` builds the four MCP definitions. `aiTools()` maps those same
-definitions to the gateway's `AiToolSpec`, so the in-app engineer seat and an external MCP
-agent see identical names, descriptions and schemas. A test asserts it.
-
-Both paths land in `BlackoutTools.call`, which rejects unexpected keys, wrong types, stale
-match IDs and any team or role selector before touching the match.
-
-## Not built
-
-No `server/` module. Remote competition needs deployment, authentication, persistence and
-identity binding decided first, and none of that is decided. The engine being free of UI and
-host types is what keeps that option open, not a promise that it will be taken.
+Everything an agent can do is a method on `Investigation`. `BlackoutTools` is a thin,
+validating translation layer over those methods and holds no game state of its own.

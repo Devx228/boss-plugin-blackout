@@ -1,73 +1,80 @@
-# BLACKOUT: Rival Crews
+# BLACKOUT
 
-A BOSS Console game for a human and an AI agent who each hold half the information and
-have to talk to win. Two stations duel compartment by compartment during a blackout.
+A BOSS Console game for one human and one AI agent. Main power fails, and the two of you
+hold different halves of the reason why.
 
 ## The idea
 
-Every station has four compartments: REACTOR, SHIELD ARRAY, RELAY MAST and LIFE SUPPORT.
-Every shot names one of them, so an attack is a decision about what to take away from the
-other crew rather than a number going down. Both crews commit in secret and the round
-resolves at the same instant, which makes bracing a compartment a genuine read.
+Station Kepler-9 went dark at 02:14. You are aboard with a torch. Your archivist is in the
+records room and cannot see a single thing you see.
 
-The split that makes it a two-player game:
-
-| | Pilot (human) | Engineer (AI) |
+| | Pilot (human) | Archivist (AI) |
 |---|---|---|
-| Power routes | sees all four | sees none |
-| Own deck | exact figures | exact figures |
-| Rival deck | ONLINE / DAMAGED / DOWN | exact integrity and barriers |
-| Bus condition | nothing | thermal telemetry and one polarity scan |
-| Chooses | action, route, compartment | thermal, polarity, output |
+| The station itself | walks it, sees what is physically there | nothing |
+| Shift roster | nothing | every entry |
+| Signed work orders | nothing | every entry |
+| Telemetry, comms, supply | nothing | every entry |
+| Compartments reachable | three to five of eight | not applicable |
+| Names the culprit | yes | never |
 
-Neither half can restore a circuit alone. The pilot cannot pick a working route without
-being told whether the bus is hot and whether polarity is inverted. The engineer cannot
-know whether a route is high-output, and so cannot safely boost, without being told. A
-wrong configuration still spends the energy, so the crew channel is the game.
+Three compartments had work signed off during the night. Two of those jobs were really
+done. One was signed off and never carried out, and that is why the lights are out.
+
+The archive records what people **claimed**. The station shows what is **true**. The fault
+is the one place those cannot both be right, and neither seat can find it alone. The
+archive cannot, because every signer was genuinely rostered where they signed. The pilot
+cannot, because they can reach only a few compartments and have no idea which ones matter
+until the archivist tells them.
+
+Somebody left a personal item in the faulty compartment, and the roster puts that person
+somewhere else entirely. That mismatch names the culprit. A second personal item is lying
+somewhere its owner really was rostered, and it means nothing. Only the roster tells the
+two apart, and only the pilot can see either of them.
 
 ## What is implemented
 
-- Pure rules engine with seeded generation, simultaneous resolution and deterministic replay.
-- Compartment targeting, per-compartment barriers, and damage effects that change play:
-  a damaged reactor starves the crew, a damaged shield array halves the barrier cap, a
-  damaged mast loses grid contests, and failing life support bleeds another compartment.
-- Escalating damage from round three, so two careful crews cannot stall to the round limit.
-- Three scripted rival crews. Measured outcomes are in `docs/BALANCE.md`.
-- A Compose board: drawn power routes, clickable deck plans, crew channel, engineer console.
-- Four versioned MCP tools (`blackout_v1_observe`, `_scan`, `_message`, `_commit`) with
-  per-round budgets, idempotent request IDs and actionable error codes.
-- An optional in-app engineer seat that drives the host AI gateway through those same tool
-  definitions, so the game is playable without wiring up an external agent first. The
-  provider, model, every tool call and the token count are shown on screen.
-- Local crew record and replay persistence through plugin storage.
+- Seeded case generator with a deterministic, verified solution.
+- A test that plays 200 cases through the legal channels only and solves every one.
+- Tests asserting the split is real: the archivist view never carries a physical state the
+  pilot has not reported, the map, or the answer.
+- Four versioned MCP tools (`blackout_v1_observe`, `_archive`, `_message`, `_mark`) with
+  budgets, idempotent request IDs and actionable error codes. There is deliberately no tool
+  that names the culprit; that call belongs to the human.
+- The archivist can draw SUSPECT and CLEAR verdicts onto the pilot's map, so the agent's
+  reasoning is visible on screen rather than buried in a chat log.
+- A Compose board: blueprint station map, findings, crew channel, three difficulties.
+- An optional in-app archivist seat driving the host AI gateway through those same tool
+  definitions, so the game is playable without wiring an external agent first.
+- Local crew record and case debriefs through plugin storage.
 
 ## What is not implemented or verified
 
-- No remote multiplayer, no authoritative match service, no two-machine play.
-- No human playtest and no enjoyment evidence. Balance numbers are scripted-crew only.
-- No live model has been recorded playing the engineer's seat in this repository.
-- Not loaded into a running BOSS build here; the plugin JAR builds but install, open,
-  disable, reload and cleanup are unverified.
-- A local duel is a trusted sandbox. It is not protected against anyone with access to
-  this desktop, and it is not tournament infrastructure.
+- No remote multiplayer and no two-machine play.
+- No human playtest. Nobody outside this repository has played a case.
+- No live model has been recorded holding the archivist's seat here. The seat compiles and
+  is wired to the gateway; latency, cost and provider differences are unmeasured.
+- Not loaded into a running BOSS build. The plugin JAR builds; install, open, disable,
+  reload and cleanup are unverified.
+- A local case is a trusted sandbox, not tournament infrastructure.
 
 ## Running it
 
 ```sh
-./gradlew build            # compile, test, and produce the plugin JAR
-./gradlew test             # 35 tests
-./gradlew balanceReport    # regenerate docs/BALANCE.md
-./gradlew runPrototype     # standalone Compose harness, no BOSS required
+./gradlew build        # compile, run 40 tests, produce the plugin JAR
+./gradlew test         # tests only
+./gradlew runPrototype # standalone Compose harness, no BOSS required
+./gradlew smokeUi      # render the board headfully for a few seconds and exit
+./gradlew installPlugin # copy the JAR into the BOSS plugins directory (close BOSS first)
 ```
 
-The plugin JAR lands in `build/libs/`. The manifest is `src/main/resources/META-INF/boss-plugin/plugin.json`.
+The plugin JAR lands in `build/libs/`. The manifest is
+`src/main/resources/META-INF/boss-plugin/plugin.json`.
 
 ## Documents
 
 `docs/PLAN-BRIEF.md` holds the product brief, `docs/DECISIONS.md` the design decisions and
-what is still open, `docs/ARCHITECTURE.md` the layout, `docs/VALIDATION.md` what has and
-has not been tested, and `docs/BALANCE.md` the measured outcomes. Repository working rules
-are in `AGENTS.md`.
+what is still open, `docs/ARCHITECTURE.md` the layout, and `docs/VALIDATION.md` what has and
+has not been tested. Repository working rules are in `AGENTS.md`.
 
 Hackathon deadline supplied by the user: 20 September 2026, 23:59 IST.
 Official brief: https://bossconsole.ai/hackathon/

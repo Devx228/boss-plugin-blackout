@@ -1,43 +1,43 @@
 package ai.rever.boss.plugin.dynamic.blackout.application
 
 import ai.rever.boss.plugin.api.PluginStorageProvider
-import ai.rever.boss.plugin.dynamic.blackout.engine.Difficulty
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-/** Local crew record. Competitive play would need a server; this is a practice logbook. */
+/** Local crew record. A practice logbook, not a ranking service. */
 @Serializable
 data class Profile(
-    val wins: Int = 0,
-    val losses: Int = 0,
-    val draws: Int = 0,
-    val rounds: Int = 0,
+    val solved: Int = 0,
+    val failed: Int = 0,
     val streak: Int = 0,
     val bestStreak: Int = 0,
-    val clearedVeteran: Boolean = false
+    val fastestSeconds: Int = 0
 ) {
-    val played: Int get() = wins + losses + draws
+    val played: Int get() = solved + failed
 
-    fun record(outcome: String, roundsPlayed: Int, difficulty: Difficulty, practice: Boolean): Profile {
-        if (practice || outcome == "INTERRUPTED" || outcome == "IN_PROGRESS") return this
-        val won = outcome == "BLUE"
+    fun record(outcome: String, secondsUsed: Int): Profile {
+        if (outcome != "SOLVED" && outcome != "FAILED") return this
+        val won = outcome == "SOLVED"
         val next = if (won) streak + 1 else 0
         return copy(
-            wins = wins + if (won) 1 else 0,
-            losses = losses + if (outcome == "ORANGE") 1 else 0,
-            draws = draws + if (outcome == "DRAW") 1 else 0,
-            rounds = rounds + roundsPlayed,
+            solved = solved + if (won) 1 else 0,
+            failed = failed + if (won) 0 else 1,
             streak = next,
             bestStreak = maxOf(bestStreak, next),
-            clearedVeteran = clearedVeteran || (won && difficulty == Difficulty.VETERAN)
+            fastestSeconds = when {
+                !won -> fastestSeconds
+                fastestSeconds == 0 -> secondsUsed
+                else -> minOf(fastestSeconds, secondsUsed)
+            }
         )
     }
 
     fun headline(): String = when {
-        played == 0 -> "No ranked duels logged yet."
-        else -> "$wins won / $losses lost / $draws drawn over $played duels. Best streak $bestStreak."
+        played == 0 -> "No cases closed yet."
+        fastestSeconds > 0 -> "$solved solved, $failed lost. Best streak $bestStreak, fastest ${fastestSeconds / 60}m ${fastestSeconds % 60}s."
+        else -> "$solved solved, $failed lost. Best streak $bestStreak."
     }
 }
 
@@ -54,8 +54,8 @@ class ProfileStore(private val storage: PluginStorageProvider?) {
         true
     }
 
-    suspend fun saveReplay(matchId: String, replayJson: String): Boolean = guard(false) {
-        storage?.putJson("replay.$matchId", replayJson) ?: return@guard false
+    suspend fun saveDebrief(caseId: String, debriefJson: String): Boolean = guard(false) {
+        storage?.putJson("case.$caseId", debriefJson) ?: return@guard false
         true
     }
 

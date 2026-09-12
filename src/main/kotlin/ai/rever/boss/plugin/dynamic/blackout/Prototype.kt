@@ -11,11 +11,11 @@ import kotlinx.coroutines.delay
 
 /**
  * Standalone Compose harness. No BOSS server, no host gateway and no stand-in agent, so the
- * engineer's seat stays empty here: the board renders and the pilot half is driveable.
+ * archivist's seat stays empty here: the board renders and the pilot half is driveable.
  *
- * Pass -Dblackout.smokeSeconds=N to open the window, optionally start a duel, and close
- * again. That turns "does the board actually render" into a pass or fail rather than a
- * screenshot someone has to look at.
+ * Pass -Dblackout.smokeSeconds=N to open the window, open a case, and close again. That
+ * turns "does the board actually render" into a pass or fail rather than a screenshot
+ * someone has to look at.
  */
 fun main() = application {
     val session = remember { Session() }
@@ -25,11 +25,11 @@ fun main() = application {
         BlackoutBoard(session, null)
         if (smoke != null) {
             LaunchedEffect(Unit) {
-                // Render the briefing, then a live board, then leave.
+                // Render the opening screen, then a live case, then leave.
                 delay(1_500)
-                session.start(difficulty = Difficulty.VETERAN)
+                session.start(Difficulty.OPERATOR)
                 delay(smoke * 1_000L)
-                println("BLACKOUT smoke test: board rendered, match ${session.match?.id} started, closing.")
+                println("BLACKOUT smoke test: board rendered, case ${session.game?.id} opened, closing.")
                 session.dispose()
                 exitApplication()
             }

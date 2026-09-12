@@ -1,7 +1,7 @@
 package ai.rever.boss.plugin.dynamic.blackout
 
 import ai.rever.boss.plugin.api.*
-import ai.rever.boss.plugin.dynamic.blackout.application.EngineerCrew
+import ai.rever.boss.plugin.dynamic.blackout.application.Archivist
 import ai.rever.boss.plugin.dynamic.blackout.application.Session
 import ai.rever.boss.plugin.dynamic.blackout.mcp.BlackoutTools
 import ai.rever.boss.plugin.dynamic.blackout.ui.BlackoutBoard
@@ -39,15 +39,15 @@ object BlackoutTab : TabTypeInfo {
 
 data class BlackoutInfo(override val id: String) : TabInfo {
     override val typeId = BlackoutTab.typeId
-    override val title = "BLACKOUT: Rival Crews"
+    override val title = "BLACKOUT"
     override val icon = Icons.Default.FlashOn
 }
 
 class BlackoutPlugin : DynamicPlugin {
     override val pluginId = PLUGIN_ID
-    override val displayName = "BLACKOUT: Rival Crews"
-    override val version = "0.2.0"
-    override val description = "A human pilot and an AI engineer duel a rival station compartment by compartment"
+    override val displayName = "BLACKOUT"
+    override val version = "0.3.0"
+    override val description = "A human walks a dark station, an AI agent reads its records, and only together can they find the fault"
     override val author = "BLACKOUT contributors"
 
     private var context: PluginContext? = null
@@ -61,12 +61,12 @@ class BlackoutPlugin : DynamicPlugin {
         val tools = BlackoutTools(session)
         context.registerMcpToolProvider(tools)
 
-        // The host gateway can hold the engineer's seat through exactly these tools.
+        // The host gateway can hold the archivist's seat through exactly these tools.
         // When the host exposes none, the seat stays open for an external MCP agent.
         val gateway = runCatching { context.getPluginAPI(AiGatewayAPI::class.java) }.getOrNull()
-        val crew = EngineerCrew(gateway, tools, session)
-        session.crew = crew
-        crew.start(context.pluginScope)
+        val archivist = Archivist(gateway, tools, session)
+        session.archivist = archivist
+        archivist.start(context.pluginScope)
 
         context.tabRegistry.registerTabType(BlackoutTab) { info, componentContext ->
             object : TabComponentWithUI, ComponentContext by componentContext {
@@ -76,7 +76,7 @@ class BlackoutPlugin : DynamicPlugin {
             }
         }
         job = context.pluginScope.launch {
-            while (isActive) { session.match?.tick(); delay(250) }
+            while (isActive) { session.game?.tick(); delay(250) }
         }
     }
 
