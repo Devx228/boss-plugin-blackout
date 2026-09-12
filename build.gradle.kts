@@ -10,7 +10,7 @@ group = "ai.rever.boss.plugin.dynamic"
 version = "0.2.0"
 repositories { google(); mavenCentral() }
 kotlin { jvmToolchain(17); compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
-val apiJar = files(providers.gradleProperty("bossApiJar").getOrElse("libs/boss-plugin-api-1.0.87.jar"))
+val apiJar = files(providers.gradleProperty("bossApiJar").getOrElse("libs/boss-plugin-api-1.0.89.jar"))
 dependencies {
     compileOnly(apiJar)
     implementation(compose.desktop.currentOs)
@@ -46,6 +46,19 @@ tasks.register<JavaExec>("runPrototype") {
     classpath = sourceSets.main.get().runtimeClasspath + apiJar
     mainClass.set("ai.rever.boss.plugin.dynamic.blackout.PrototypeKt")
 }
+// Where this BOSS build loads dynamic plugins from. Override with -PbossPluginDir=...
+val bossPluginDir = providers.gradleProperty("bossPluginDir")
+    .getOrElse("${System.getProperty("user.home")}/.boss_debug/plugins")
+
+tasks.register<Copy>("installPlugin") {
+    group = "distribution"
+    description = "Copy the plugin JAR into the BOSS plugins directory. Close BOSS first."
+    dependsOn("buildPluginJar")
+    from(layout.buildDirectory.file("libs/boss-plugin-blackout-${project.version}.jar"))
+    into(bossPluginDir)
+    doLast { logger.lifecycle("Installed boss-plugin-blackout-${project.version}.jar into $bossPluginDir") }
+}
+
 tasks.register<JavaExec>("smokeUi") {
     group = "verification"
     description = "Render the board headfully for a few seconds and exit, to prove it draws."
