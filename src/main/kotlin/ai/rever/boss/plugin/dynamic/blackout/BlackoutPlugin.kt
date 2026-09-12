@@ -17,6 +17,23 @@ object BlackoutTab : TabTypeInfo {
     override val typeId = TabTypeId("blackout", PLUGIN_ID)
     override val displayName = "BLACKOUT"
     override val icon = Icons.Default.FlashOn
+
+    /**
+     * Without this the tab type registers but never appears in the new tab dialog: the
+     * host lists only plugin types whose newTabSpec is non-null, and the default is null.
+     *
+     * A blank label, a blank placeholder and an optional input together mean "no input
+     * step" to the host, so picking BLACKOUT opens the board straight away. The game asks
+     * for nothing up front; the briefing screen is where a duel gets configured.
+     */
+    override val newTabSpec = NewTabSpec(
+        order = 50,
+        inputLabel = "",
+        inputPlaceholder = "",
+        inputOptional = true,
+        confirmLabel = "Play"
+    )
+
     override fun createTabInfo(input: String, context: NewTabContext): TabInfo = BlackoutInfo(input)
 }
 
