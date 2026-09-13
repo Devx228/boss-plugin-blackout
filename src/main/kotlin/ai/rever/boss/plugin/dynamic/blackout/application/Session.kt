@@ -7,11 +7,15 @@ class Session {
     @Volatile var escape: Escape? = null
         private set
 
-    @Synchronized fun startEscape(seed: Long? = null): Escape {
+    @Synchronized fun startEscape(
+        seed: Long? = null,
+        mode: RoomMode = RoomMode.STANDARD,
+        companion: CompanionDescriptor = CompanionDescriptor()
+    ): Escape {
         check(!disposed)
         partner?.reset()
         escape?.interrupt()
-        return Escape(seed ?: SecureRandom().nextLong()).also { escape = it }
+        return Escape(seed ?: SecureRandom().nextLong(), mode = mode, companion = companion).also { escape = it }
     }
 
     @Synchronized fun currentEscape(): Escape {

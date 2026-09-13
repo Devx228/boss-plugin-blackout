@@ -1,35 +1,32 @@
 # BLACKOUT
 
-> The lights die. The door seals. The air starts running out. Your only teammate is an AI that has never seen the room.
+> The lights die. The door seals. Your only teammate is an AI that cannot see the room.
 
-BLACKOUT is a co-op escape room for [BOSS Console](https://bossconsole.ai), played by one human and one AI.
+BLACKOUT is a cooperative escape-room plugin for [BOSS Console](https://bossconsole.ai). A human explores a dark, reactive maintenance room while a real AI companion reads records and controls remote machinery.
 
-## The story
+## The rule
 
-You wake up in a dark maintenance room with ten minutes of air left. You can see everything and touch everything, but you don't know how any of it works.
+You have eyes and hands. Your companion has records and remote control. Neither can escape alone.
 
-Your AI companion is somewhere on the other end of the line. It can't see a thing, but it has the manuals, a calculator and the door controls.
+1. **Power:** share the panel; the AI calculates and routes power; you operate the breakers.
+2. **Cabinet:** share the label; the AI tunes the decoder; you enter the decoded word.
+3. **Recorder:** share the waveform and strips; the AI synchronizes the channel; you rebuild the timeline.
+4. **Exit:** share the seal; the AI arms the release; you turn the handle within 20 seconds.
 
-Talk to each other, and you both get out.
+After power returns, the companion can also control lighting and ventilation. These optional systems reveal environmental story details and visibly change the room.
 
-## Escaping the room
+## What you will see
 
-1. **Breakers.** You read the numbers off the panel. The AI works out the power and tells you which switches to flip.
-2. **Cabinet.** You find a scrambled label. The AI knows the code to unscramble it. You type the password.
-3. **Recorder.** Put three memory strips in order and find out what Mara and Ivo did the night the lights went out.
-4. **Door.** You share the seal, the AI unlocks the channel, and you have 20 seconds to turn the handle.
+- **A room that reacts.** Lights come on, smoke drifts, sparks fly on a mistake and the pressure door slides open when you both get it right.
+- **Your AI at work.** Every calculation, power route, decoder tune and door authorization appears in the chat as it happens, next to the conversation.
+- **An ending that takes its time.** Escape and the camera pushes into the light, tells you what really happened that night and rolls the credits. Run out of air and the room dies around you, reminds you that you are still inside, and rolls them in red.
 
-## Rules
+## Modes
 
-- **You** inspect, flip, type, order and turn. **The AI** reads manuals, calculates, routes power and unlocks the door.
-- The AI only sees a clue after you press **Share**.
-- You start with 600 seconds of air. When it runs out, the room closes.
-- A wrong answer costs 15 seconds. A typo that isn't a real answer is free.
-- You get three hints, and each one costs 20 seconds.
-- Pausing freezes the clock, but the run counts as practice.
-- If the door's 20 seconds run out, the AI can unlock it again.
-- The AI has limited moves: 12 manual reads, 30 messages, 16 calculations, 8 power changes and 12 unlock attempts.
-- Every room is different: the symbols, codes and story order change each time.
+- **Standard:** 10 minutes; mistakes cost 15 seconds; hints cost 20 seconds.
+- **Showcase:** 4 minutes; mistakes and hints cost 10 seconds.
+- Three hints are available. Pausing freezes both timers and marks the run as practice.
+- Every valid mistake is recoverable. Invalid tool input never costs game time.
 
 ## Play
 
@@ -37,17 +34,24 @@ Talk to each other, and you both get out.
 .\gradlew.bat clean buildPluginJar
 ```
 
-1. In BOSS, open **Toolbox → From File** and pick `build/libs/boss-plugin-blackout-0.4.0.jar`.
+1. In BOSS, open **Toolbox → From File** and select `build/libs/boss-plugin-blackout-0.5.0.jar`.
 2. Open a **BLACKOUT** tab.
-3. Press **Connect** to bring in your BOSS model, or connect any agent through the MCP tools below.
+3. Select **Connect** to use the configured BOSS model, or attach one external agent through MCP.
 
-## AI tools
+The companion seat is always a real configured model or an external agent. BLACKOUT has no scripted solver fallback.
 
-| Tool | What it does |
+## Agent tools
+
+| Tool | Remote capability |
 | --- | --- |
-| `blackout_v2_observe` | See the room status, shared clues and messages |
-| `blackout_v2_archive` | Read the manuals |
-| `blackout_v2_message` | Talk to the human |
-| `blackout_v2_calculate` | Add, subtract, multiply or divide |
-| `blackout_v2_route` | Set power to LOW, NORMAL or HIGH |
-| `blackout_v2_arm` | Unlock the exit channel |
+| `blackout_v3_observe` | Read status, shared clues, messages and available actions |
+| `blackout_v3_archive` | Search manuals and incident records |
+| `blackout_v3_message` | Speak through the room terminal |
+| `blackout_v3_calculate` | Perform bounded arithmetic |
+| `blackout_v3_route_power` | Route LOW, NORMAL or HIGH supply power |
+| `blackout_v3_tune_decoder` | Physically tune the cabinet decoder |
+| `blackout_v3_sync_recorder` | Synchronize the memory recorder |
+| `blackout_v3_control_environment` | Operate room lighting and ventilation |
+| `blackout_v3_arm_exit` | Authorize the exit channel |
+
+There are no agent tools for seeing the room, operating breakers, entering passwords, arranging strips, pausing, resetting, requesting hints or turning the handle.

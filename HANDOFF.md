@@ -1,92 +1,37 @@
 # BLACKOUT handoff
 
-## Start here
+## Current direction
 
-Workspace: `D:\boss-plugin-blackout`. The user approved implementation and then changed
-the product direction to a minimal, fun human + AI escape room. They want the whole
-experience built, not another planning-only response. No dated milestone schedule.
-The submission deadline supplied by the user remains 20 September 2026, 23:59 IST.
+Workspace: `D:\boss-plugin-blackout`. Version 0.5.0 is a human plus AI escape room with an active companion that controls machinery. The room is an illustrated 2D scene with depth, lighting and animation; the earlier projected 3D room was replaced at the user's request. Do not restore combat or the historical investigation.
 
-Read `AGENTS.md`, `docs/ESCAPE-ROOM.md`, and the newest section of `docs/VALIDATION.md`.
-Older combat and investigation plans are historical. **Do not reintroduce combat.**
+Read `AGENTS.md`, `docs/ESCAPE-ROOM.md`, and the newest section of `docs/VALIDATION.md` before changing behavior.
 
-## Current implementation
+## Implemented in 0.5.0
 
-Version 0.4.0 is the escape-room prototype. Its default BOSS tab and standalone harness
-open `ui/EscapeBoard.kt`. The 0.3 investigation source and tests were removed.
+- `engine/EscapeRoom.kt`: three seeded incident packs with characters, emergencies, passwords, endings, environmental discoveries, and an escape and a trapped epilogue for each.
+- `application/Escape.kt`: Standard and Showcase modes, authoritative state, required human and agent actions in every stage, remote systems, hints, recoverable penalties, effects and privacy-safe debriefs. The pilot view carries a `timeline` of messages and companion activity (calculations, routing, tuning, syncing, lighting, airflow, arming, archive reads by record name only) and the finished room's `epilogue`.
+- `mcp/EscapeTools.kt`: nine strict `blackout_v3_*` tools with room binding, idempotency, budgets and no human actions. The agent-facing JSON is unchanged by the activity timeline.
+- `application/Companion.kt`: the configured BOSS model plays through the same tools. There is no scripted fallback.
+- `ui/`: `EscapeBoard` owns state and layout; `RoomScene` + `SceneKit` draw the room, effects and ending cinematics; `Devices` holds the four puzzle close-ups; `CompanionPanel` shows systems and the chat with the companion work log; `Hud`, `Opening`, `Ending`, `Overlays`, `Theme`, `Glyphs`, `Clues` and `Effects` complete the interface.
+- `Snapshot.kt` and `./gradlew renderUi`: renders every screen offscreen to `build/ui-snapshots/` with no window. Excluded from the plugin JAR.
 
-- `engine/EscapeRoom.kt`: seeded original content: six-symbol manual, three fitted
-  breakers, Caesar-encoded cabinet word, three shuffled narrative strips.
-- `application/Escape.kt`: synchronized authoritative local state, stage prerequisites,
-  explicit human-to-agent clue sharing, injected monotonic clock, 15-second wrong-answer
-  penalties, three 20-second hints, pause marked as practice, terminal debrief, idempotent
-  agent messages/authorization, and final human + agent handshake.
-- `mcp/EscapeTools.kt`: exactly six `blackout_v2_*` tools; typed argument validation,
-  stale room rejection, no human actions, same specs for external MCP and host AI gateway.
-- `application/Companion.kt`: real-model gateway integration with an
-  escape companion prompt and bounded manual memory. No scripted agent fallback. Uses
-  human activity revision to avoid responding to its own messages or losing a human move
-  during an in-flight turn. Model output must reach the human via the message tool.
-- `ui/RoomScene.kt`: original flat line-art room drawn in Compose Canvas, with semantic
-  keyboard-focusable object buttons. Power, cabinet and exit visibly change with progress.
-- `ui/EscapeBoard.kt`: responsive room + channel layout; focused object interaction;
-  click-to-order breakers/story; password input; connection setup; inspect/share;
-  timed final handle; hints/pause; inventory; log; ending and persistent debrief.
-- `application/Session.kt`: new escape lifetime, reset/cancellation and old-room protection.
-- Plugin registers the six v2 tools only. Legacy v1 tools were removed with the investigation.
+## Build and test evidence
 
-## Build/test status for this iteration
+- `.\gradlew.bat --offline --no-daemon --max-workers=1 test renderUi buildPluginJar` passes on JDK 17 and Windows 11. EscapeTest runs 17 tests, 0 failures.
+- The newest test checks that companion activity reaches the pilot timeline, that archive activity reveals no manual contents, that replayed requests do not duplicate activity, and that epilogues appear only after the run ends.
+- Offscreen renders of the opening, all four stages, the compact layout, the escape story, credits, the trapped sequence and the debrief were inspected.
 
-The user requested **at most two compilation attempts**, after coding is finished.
+## Live evidence
 
-1. First attempt: `./gradlew.bat --offline --no-daemon --max-workers=1 test buildPluginJar`.
-   Main source compiled. Test compilation failed on two incorrect test references:
-   `engine.EscapeStage` (actually in application) and `AiToolSpec.parametersJson`
-   (correct property: `inputSchema`). Both references were corrected in source.
-2. Final attempt, same command: BUILD SUCCESSFUL. `EscapeTest` 16 tests, 0 failures, 0 errors,
-   0 skipped. Produced `build/libs/boss-plugin-blackout-0.4.0.jar`.
+- The 0.5.0 JAR loads in a BOSS 9.5.12 development build (`~/.boss_debug`): all eight persisted plugins load, and the nine v3 tools are listed on the local `boss` MCP server.
+- An external agent played the companion seat over MCP in five rooms: three escapes (one with two mistakes, two with none) and two trapped runs, one lost and one left to time out. Activity rows, the escape cinematic and the trapped cinematic were watched in BOSS by the user.
 
-Do not mistake an existing JAR or old 40-test report for validation of the new escape room.
-The new `EscapeTest` currently contains 16 named tests, including legal-channel solutions
-for 100 seeds, timer/pause/final authorization, invalid input, privacy, budgets, and tools.
-No live model or human fun/pacing test has been completed for v0.4.0.
+## Next useful work
 
-## How to continue
-
-1. Done: final compile/test pass recorded above and in VALIDATION.
-2. If permitted, run the standalone headful `smokeUi` harness and inspect its render.
-   That is a UI render check, not a human/agent playtest. Never launch the BOSS host.
-3. User-controlled BOSS test: install the built 0.4.0 JAR through Toolbox, open BLACKOUT,
-   configure the real companion, complete a room, test close/reopen, disable/re-enable,
-   reload, gateway interruption, and persistence. Capture provider/model and real evidence.
-4. Have unfamiliar humans play. Tune time, clue wording and puzzle satisfaction based on
-   their behavior. Automated solvers do not establish enjoyment.
-
-## Known limitations / remaining work
-
-- Ten minutes, penalties and hint budget are initial design values, not playtested balance.
-- Built-in companion inherits the configured gateway. Requires real provider validation.
-  External agent setup is self-reported in the opening screen, not a connection probe.
-- Explore-without-agent is explicitly an incomplete exploration mode; no fake companion.
-- This chapter has three authored puzzle families with seeded variations. Story premise is
-  fixed. More chapters, richer branching, sound, remote co-op and competitive play are not
-  implemented and not required for the first playable.
-- Debriefs store events, not user/model free-text, provider credentials, or model reasoning.
-  Persistence is attempted for terminal runs while the UI is mounted; abrupt process death
-  is not crash recovery. Do not promise a resumable save or full replay system.
-- Only the agent has the terminal calculator (16 calls, four bounded arithmetic operations).
-  Human supplies load/voltage readings; agent calculates amps and configures remote power
-  (eight settings). Human breaker operation fails until this is done. Final authorization also
-  requires the agent to select a channel using the human's door seal and agent's manual.
-- Companion arming can be repeated 12 times; observe is once/second; archive 12 queries;
-  messages 30 per room. Shared BOSS endpoint is one trusted seat, not agent identity.
-- No security against local file/screen access. Human actions are absent from agent tools.
-- Legacy docs contain historical runtime evidence for 0.2.0, explicitly not this version.
-- Existing README/VALIDATION edits were present on entry; their prior evidence is preserved.
+- Play with the built-in BOSS model seat and with a second provider; note latency and token use.
+- Have unfamiliar players try Standard and Showcase; tune timings and clue wording from what they do.
+- Consider making Share clue more prominent: early players asked the companion before sharing.
 
 ## Boundaries
 
-No host or Warden changes. Source is published at https://github.com/Devx228/boss-plugin-blackout. No catalog
-registration or store publication has been requested. Do not use `installPlugin` blindly: it copies into the user's live
-plugin directory; prefer user-controlled Toolbox installation. Never delete existing JARs
-or stop Java processes to work around a build issue.
+No host or Warden changes. Do not put credentials, conversation free text or model reasoning in logs or debriefs. The shared local MCP endpoint is one trusted seat and cannot authenticate separate agents. Catalog registration and store publication are maintainer decisions.

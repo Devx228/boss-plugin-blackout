@@ -1,18 +1,29 @@
 # Evidence and acceptance gates
 
-## Current escape-room iteration (0.4.0)
+## Current escape-room iteration (0.5.0)
 
-The default game is now the escape room described in ESCAPE-ROOM.md. Historical evidence
-below is preserved and must not be applied to 0.4.0.
+The default game is the active-companion escape room described in ESCAPE-ROOM.md, drawn as
+an illustrated 2D room. Historical evidence below must not be applied to 0.5.0.
 
-First compile attempt: main source compiled; test compilation failed on two incorrect
-references in EscapeTest (EscapeStage package and AiToolSpec inputSchema property). Those
-references have been corrected in source. Final build/test attempt passed on JDK 17,
-Windows 11: EscapeTest 16 tests, 0 failures, 0 errors, 0 skipped, including 100 seeded
-legal-channel escape solutions. No human or real-model room playtest,
-BOSS 0.4.0 load/lifecycle check, or 0.4.0 persistence check has been performed.
+`.\gradlew.bat --offline --no-daemon --max-workers=1 test renderUi buildPluginJar` passes on
+JDK 17 and Windows 11: EscapeTest runs 17 tests, 0 failures, 0 errors, 0 skipped.
 
-See HANDOFF.md for the user's two-compilation limit and the next-agent checklist.
+The suite solves 100 seeds through legal views across all incident packs; requires agent
+mutations for puzzle progress; validates both modes, environment discoveries, recoverable
+remote failures, privacy, timers, pause, idempotency, v3 schemas, stale calls, calculator
+bounds and debrief redaction. It also checks the companion activity timeline: calculations
+and routing appear, archive reads show record names but no manual contents, replays do not
+duplicate rows, and epilogues exist only after a run ends.
+
+`renderUi` renders every screen offscreen; the opening, four stages, compact layout, escape
+story, credits, trapped sequence and debrief were inspected.
+
+In a BOSS 9.5.12 development build the JAR loads with all persisted plugins and exposes the
+nine v3 tools on the local MCP server. An external agent played the companion seat over MCP
+for five rooms, three escapes and two trapped runs, and the user watched the activity
+feed and both ending sequences in the BOSS tab.
+
+See HANDOFF.md for the next-agent checklist.
 
 ## Historical investigation evidence (0.3.0)
 

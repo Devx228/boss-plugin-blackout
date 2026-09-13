@@ -53,8 +53,10 @@ solvability test in `InvestigationTest` are the contract:
 
 ## UI
 
-Seven colours, one accent, three type sizes, flat surfaces separated by space. One primary
-thing on screen at a time. When adding an element, remove or demote another. No 3D.
+Seven colours, one accent, three type sizes, flat controls separated by space. One primary
+thing on screen at a time. When adding an element, remove or demote another. The user's
+13 September 2026 direction explicitly permits a Kotlin-rendered 3D room; keep accessible
+2D controls for every interaction.
 
 No remote repository has been created as part of this scaffold. Public integration, catalog
 registration and store publication are distinct steps.
