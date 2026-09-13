@@ -7,7 +7,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.3.0"
 }
 group = "ai.rever.boss.plugin.dynamic"
-version = "0.4.0"
+version = "0.5.0"
 repositories { google(); mavenCentral() }
 kotlin { jvmToolchain(17); compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
 val apiJar = files(providers.gradleProperty("bossApiJar").getOrElse("libs/boss-plugin-api-1.0.89.jar"))
@@ -31,6 +31,8 @@ tasks.processResources {
 tasks.register<Jar>("buildPluginJar") {
     archiveFileName.set("boss-plugin-blackout-${project.version}.jar")
     from(sourceSets.main.get().output)
+    // The offscreen renderer and its scripted stand-in are development tools; the plugin never ships them.
+    exclude("ai/rever/boss/plugin/dynamic/blackout/SnapshotKt*", "ai/rever/boss/plugin/dynamic/blackout/Companion2*")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 tasks.build { dependsOn("buildPluginJar") }
@@ -60,4 +62,12 @@ tasks.register<JavaExec>("smokeUi") {
     mainClass.set("ai.rever.boss.plugin.dynamic.blackout.PrototypeKt")
     systemProperty("blackout.smokeSeconds", providers.gradleProperty("smokeSeconds").getOrElse("6"))
     providers.gradleProperty("capturePath").orNull?.let { systemProperty("blackout.capturePath", it) }
+}
+
+tasks.register<JavaExec>("renderUi") {
+    group = "verification"
+    description = "Render every screen offscreen to PNG files, without opening a window."
+    classpath = sourceSets.main.get().runtimeClasspath + apiJar
+    mainClass.set("ai.rever.boss.plugin.dynamic.blackout.SnapshotKt")
+    args(layout.buildDirectory.dir("ui-snapshots").get().asFile.absolutePath)
 }

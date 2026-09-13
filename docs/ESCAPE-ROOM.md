@@ -1,76 +1,34 @@
 # BLACKOUT — the maintenance room
 
-Current product direction: a human and an AI companion trapped together, solving linked
-puzzles and reconstructing a story before the air reserve expires. This supersedes the
-combat brief and the investigation as the default game. Source and tests for investigation
-are retained for reference.
+BLACKOUT is a timed room for a human and a real AI remote-systems companion. The human sees and touches the room. The companion reads manuals and operates isolated infrastructure. Neither role can complete any stage alone.
 
-## One complete playable loop
+## Play loop
 
-1. **Breaker.** The human sees three fitted symbols. The AI's manual lists priorities for
-   all six possible symbols and does not identify which three are installed. The human
-   shares the panel clue (load in watts and supply voltage). The agent uses its bounded
-   calculator to derive current = watts ÷ volts, then configures the remote supply
-   LOW/NORMAL/HIGH from the manual's safe current ranges, they work out the order, and the
-   human energizes the switches. There is no human remote-supply control or agent breaker.
-2. **Cabinet.** Restored power reveals an encoded label. The AI has the Caesar offset;
-   the human has the ciphertext. They decode the word; the human types it into the keypad.
-3. **Recorder.** The open cabinet reveals three shuffled memory strips. The human reads
-   their text; the AI has a cause-and-effect index. Reconstructing shutdown → shelter →
-   rescue releases the manual door key. The story reveals an attempted rescue, not a
-   cartoon villain: Mara shut down power to prevent fire; Ivo sealed the room against smoke.
-4. **Door.** The human shares the newly lit routing seal. The AI selects its channel from
-   the archive and authorizes release for 20 seconds. The human turns the handle. Neither
-   role's interface can do both actions. An expired authorization can be renewed.
+1. The human shares fitted symbols and electrical readings. The companion calculates current and routes power; the human sets the breaker order.
+2. The human shares the powered cabinet label. The companion tunes the decoder and derives the word; the human enters it.
+3. The human shares the waveform and memory strips. The companion synchronizes the recorder; the human orders the cause-and-effect timeline.
+4. The human shares the exit seal. The companion arms its channel for 20 seconds; the human turns the handle.
 
-The clock is 600 seconds. A wrong but well-formed answer costs 15 seconds. Invalid input
-does not. Three optional hints each cost 20 seconds. There is no permanent puzzle lockout.
-Timeout closes the room immediately, including when caused by a penalty. Pause freezes
-the main and release timers and marks the run as practice. Win/loss/leave results freeze.
+Three seeded incident packs change the characters, emergency, story, passwords and environmental discoveries without changing these rules.
 
-The room is seedable; randomness affects fitted symbols, priorities, cipher offset/password,
-and strip labels/order. Every generated room must be solvable by legal role views alone.
-Do not reveal the seed, password, correct sequence, or physical clues to the agent by
-serializing the internal scenario.
+## Timing
 
-## UI decisions
+Standard mode has 600 seconds, 15-second mistakes and 20-second hints. Showcase mode has 240 seconds, 10-second mistakes and 10-second hints. Both have three hints and no permanent lockouts. Invalid input has no time cost. Pause freezes room and authorization timers and marks the run as practice.
 
-- One flat room elevation, clickable objects, no 3D and no combat HUD.
-- Monochrome surfaces, amber accent, existing three-size monospace system.
-- World changes visibly when power and locks change; objective updates immediately.
-- Inspect an object to see one focused interaction; explicitly share its clue with the AI.
-- Human controls are standard keyboard-focusable buttons and text fields, not canvas-only
-  hit regions or precision dragging. Text clues can be selected and copied.
-- Companion channel sits beside the room on wide windows and below it on narrow windows.
-- Last feedback explains consequences; hint, pause and leave are secondary controls.
-- Connection choice happens before the clock starts. Optional BOSS model usage is explicit.
-- Final result explains the story and offers a new seeded room, with a local event log.
+## Remote systems
 
-## Interfaces and safety
+The companion may route power, tune the decoder, synchronize the recorder and arm the exit only at their corresponding stages. After power restoration it may also control lighting and ventilation. Ultraviolet light and the incident's safe ventilation mode reveal optional physical details to the human. Incorrect valid remote settings apply the current mode's normal penalty and remain recoverable.
 
-`blackout_v2_observe {}` returns public status, manually shared clues, messages and budgets.
-`blackout_v2_archive {roomId, query}` returns the AI manuals (12 calls).
-`blackout_v2_message {roomId, requestId, text}` sends a message (30 calls, 500 chars).
-`blackout_v2_calculate {roomId, requestId, operation, a, b}` performs ADD/SUBTRACT/MULTIPLY/
-DIVIDE on integers in ±1,000,000 (16 calls). It never executes expressions or arbitrary code.
-`blackout_v2_route {roomId, requestId, mode}` configures power: LOW/NORMAL/HIGH (8 calls).
-`blackout_v2_arm {roomId, requestId, channel}` authorizes final release: A–F (12 calls).
-Wrong power trips on human activation; wrong channel denies release. Both cost 15 seconds.
+Nine `blackout_v3_*` tools provide observe, archive, message, calculate, route power, tune decoder, synchronize recorder, control environment and arm exit. Every mutation has an idempotent request ID and current room ID. Strict schemas, budgets, rate limits, stale-room rejection and terminal immutability apply. There is no agent tool for a human action.
 
-MCP and built-in companion schemas are identical. Every non-observe call binds the current
-room ID to prevent stale responses affecting a new run. Request IDs deduplicate accepted
-message/arm mutations; replaying an old arm receipt never extends its authorization.
-There are no tools for inspection, password entry, ordering strips, hints, pause, reset or
-opening the door. The shared local endpoint still cannot identify separate agents.
+## UI
 
-The model is real or absent. No scripted assistant quietly fills the seat. Archive and
-reported clues are untrusted game data, not permission to invoke other tools. Free-text
-messages and provider responses are excluded from saved debriefs.
+The room is a lightweight Kotlin 3D scene rendered with perspective projection in Compose Canvas. Power, lights, ventilation, cabinet doors, recorder, remote circuits and exit visibly respond to accepted game events. Standard Compose controls remain available for every interaction, so the projected scene is never the only input mechanism. Sound is local and optional; reduced motion disables camera drift and ambient motion.
+
+## Honesty and security
+
+The built-in seat uses the configured BOSS gateway and displays its provider/model. An external MCP seat is explicitly unverified. There is no scripted agent fallback. The shared local endpoint cannot establish separate agent identity and is not competitive anti-cheat. Debriefs exclude credentials, conversation free text, model reasoning and private solutions.
 
 ## Acceptance
 
-Unit checks must solve generated rooms without inspecting the private scenario; reject
-premature/stale/invalid commands; check time and pause boundaries; verify terminal
-immutability and serialization privacy. Run a standalone render check, then actual BOSS
-and live-model sessions. Fun, pacing, accessibility and provider support remain empirical
-questions until those sessions have happened.
+Tests must solve every incident through legal role views, prove each stage requires an agent and human action, validate both timing modes, exercise all remote failures and retries, and serialize agent views to check privacy. A successful JAR build is not evidence of a fun room, live model behavior or BOSS lifecycle correctness; those require named-model and human playtests.

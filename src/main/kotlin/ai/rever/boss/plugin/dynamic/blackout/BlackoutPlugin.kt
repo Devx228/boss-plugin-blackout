@@ -24,7 +24,7 @@ object BlackoutTab : TabTypeInfo {
      *
      * A blank label, a blank placeholder and an optional input together mean "no input
      * step" to the host, so picking BLACKOUT opens the board straight away. The game asks
-     * for nothing up front; the briefing screen is where a duel gets configured.
+     * for nothing up front; the briefing screen is where a room gets configured.
      */
     override val newTabSpec = NewTabSpec(
         order = 50,
@@ -46,8 +46,8 @@ data class BlackoutInfo(override val id: String) : TabInfo {
 class BlackoutPlugin : DynamicPlugin {
     override val pluginId = PLUGIN_ID
     override val displayName = "BLACKOUT"
-    override val version = "0.4.0"
-    override val description = "A human and an AI companion solve a sealed room together before the air runs out"
+    override val version = "0.5.0"
+    override val description = "A human and an AI remote-systems companion escape a dark, reactive maintenance room"
     override val author = "BLACKOUT contributors"
 
     private var context: PluginContext? = null

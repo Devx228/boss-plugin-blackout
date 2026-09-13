@@ -6,7 +6,7 @@
   "apiVersion": "1.0.89",
   "mainClass": "ai.rever.boss.plugin.dynamic.blackout.BlackoutPlugin",
   "type": "tab",
-  "description": "A human and an AI companion solve a sealed room together before the air runs out.",
+  "description": "A human and an AI remote-systems companion escape a reactive 3D maintenance room.",
   "author": "Devx228",
   "isDynamic": true,
   "canUnload": true
