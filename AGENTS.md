@@ -1,6 +1,18 @@
 # Working on BLACKOUT
 
-## Current phase: playable local prototype
+## Current phase: escape-room implementation
+
+The user's latest direction supersedes the investigation as the default game: a minimal,
+playable timed room for a human and an AI companion. Current design: restore power,
+decode a cabinet password, reconstruct story fragments, coordinate the exit. See
+`HANDOFF.md` first, then `docs/ESCAPE-ROOM.md`. Do not restore the combat design.
+
+The investigation source and tests were removed in 0.4.0. The contract below is historical.
+
+The user requested finishing code before compilation, with two compile attempts for this
+iteration. Do not run repeated exploratory Gradle builds. See HANDOFF for the attempts used.
+
+## Historical investigation contract
 
 BLACKOUT is a co-op asymmetric investigation. A human pilot walks a dark station and sees
 physical state; an AI archivist reads the station records and cannot see the station. The

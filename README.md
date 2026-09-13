@@ -1,84 +1,53 @@
 # BLACKOUT
 
-A BOSS Console game for one human and one AI agent. Main power fails, and the two of you
-hold different halves of the reason why.
+> The lights die. The door seals. The air starts running out. Your only teammate is an AI that has never seen the room.
 
-## The idea
+BLACKOUT is a co-op escape room for [BOSS Console](https://bossconsole.ai), played by one human and one AI.
 
-Station Kepler-9 went dark at 02:14. You are aboard with a torch. Your archivist is in the
-records room and cannot see a single thing you see.
+## The story
 
-| | Pilot (human) | Archivist (AI) |
-|---|---|---|
-| The station itself | walks it, sees what is physically there | nothing |
-| Shift roster | nothing | every entry |
-| Signed work orders | nothing | every entry |
-| Telemetry, comms, supply | nothing | every entry |
-| Compartments reachable | three to five of eight | not applicable |
-| Names the culprit | yes | never |
+You wake up in a dark maintenance room with ten minutes of air left. You can see everything and touch everything, but you don't know how any of it works.
 
-Three compartments had work signed off during the night. Two of those jobs were really
-done. One was signed off and never carried out, and that is why the lights are out.
+Your AI companion is somewhere on the other end of the line. It can't see a thing, but it has the manuals, a calculator and the door controls.
 
-The archive records what people **claimed**. The station shows what is **true**. The fault
-is the one place those cannot both be right, and neither seat can find it alone. The
-archive cannot, because every signer was genuinely rostered where they signed. The pilot
-cannot, because they can reach only a few compartments and have no idea which ones matter
-until the archivist tells them.
+Talk to each other, and you both get out.
 
-Somebody left a personal item in the faulty compartment, and the roster puts that person
-somewhere else entirely. That mismatch names the culprit. A second personal item is lying
-somewhere its owner really was rostered, and it means nothing. Only the roster tells the
-two apart, and only the pilot can see either of them.
+## Escaping the room
 
-## What is implemented
+1. **Breakers.** You read the numbers off the panel. The AI works out the power and tells you which switches to flip.
+2. **Cabinet.** You find a scrambled label. The AI knows the code to unscramble it. You type the password.
+3. **Recorder.** Put three memory strips in order and find out what Mara and Ivo did the night the lights went out.
+4. **Door.** You share the seal, the AI unlocks the channel, and you have 20 seconds to turn the handle.
 
-- Seeded case generator with a deterministic, verified solution.
-- A test that plays 200 cases through the legal channels only and solves every one.
-- Tests asserting the split is real: the archivist view never carries a physical state the
-  pilot has not reported, the map, or the answer.
-- Four versioned MCP tools (`blackout_v1_observe`, `_archive`, `_message`, `_mark`) with
-  budgets, idempotent request IDs and actionable error codes. There is deliberately no tool
-  that names the culprit; that call belongs to the human.
-- The archivist can draw SUSPECT and CLEAR verdicts onto the pilot's map, so the agent's
-  reasoning is visible on screen rather than buried in a chat log.
-- A Compose board: blueprint station map, findings, crew channel, three difficulties.
-- An optional in-app archivist seat driving the host AI gateway through those same tool
-  definitions, so the game is playable without wiring an external agent first.
-- Local crew record and case debriefs through plugin storage.
+## Rules
 
-## What is not implemented or verified
+- **You** inspect, flip, type, order and turn. **The AI** reads manuals, calculates, routes power and unlocks the door.
+- The AI only sees a clue after you press **Share**.
+- You start with 600 seconds of air. When it runs out, the room closes.
+- A wrong answer costs 15 seconds. A typo that isn't a real answer is free.
+- You get three hints, and each one costs 20 seconds.
+- Pausing freezes the clock, but the run counts as practice.
+- If the door's 20 seconds run out, the AI can unlock it again.
+- The AI has limited moves: 12 manual reads, 30 messages, 16 calculations, 8 power changes and 12 unlock attempts.
+- Every room is different: the symbols, codes and story order change each time.
 
-- No remote multiplayer and no two-machine play.
-- No human playtest. Nobody outside this repository has played a case.
-- No live model has been recorded holding the archivist's seat here. The seat compiles and
-  is wired to the gateway; latency, cost and provider differences are unmeasured.
-- Not loaded into a running BOSS build. The plugin JAR builds; install, open, disable,
-  reload and cleanup are unverified.
-- A local case is a trusted sandbox, not tournament infrastructure.
+## Play
 
-## Running it
-
-```sh
-./gradlew build        # compile, run 40 tests, produce the plugin JAR
-./gradlew test         # tests only
-./gradlew runPrototype # standalone Compose harness, no BOSS required
-./gradlew smokeUi      # render the board headfully for a few seconds and exit
-./gradlew installPlugin # copy the JAR into the BOSS plugins directory (close BOSS first)
+```powershell
+.\gradlew.bat clean buildPluginJar
 ```
 
-The plugin JAR lands in `build/libs/`. The manifest is
-`src/main/resources/META-INF/boss-plugin/plugin.json`.
+1. In BOSS, open **Toolbox → From File** and pick `build/libs/boss-plugin-blackout-0.4.0.jar`.
+2. Open a **BLACKOUT** tab.
+3. Press **Connect** to bring in your BOSS model, or connect any agent through the MCP tools below.
 
-## Documents
+## AI tools
 
-`docs/PLAN-BRIEF.md` holds the product brief, `docs/DECISIONS.md` the design decisions and
-what is still open, `docs/ARCHITECTURE.md` the layout, and `docs/VALIDATION.md` what has and
-has not been tested. Repository working rules are in `AGENTS.md`.
-
-Hackathon deadline supplied by the user: 20 September 2026, 23:59 IST.
-Official brief: https://bossconsole.ai/hackathon/
-
-This is a new plugin candidate, not a fork of Arcade and not an addition to Warden.
-Asymmetric-information cooperation has prior art, including Keep Talking and Nobody
-Explodes; the mechanics and assets here are original and the inspiration is stated.
+| Tool | What it does |
+| --- | --- |
+| `blackout_v2_observe` | See the room status, shared clues and messages |
+| `blackout_v2_archive` | Read the manuals |
+| `blackout_v2_message` | Talk to the human |
+| `blackout_v2_calculate` | Add, subtract, multiply or divide |
+| `blackout_v2_route` | Set power to LOW, NORMAL or HIGH |
+| `blackout_v2_arm` | Unlock the exit channel |

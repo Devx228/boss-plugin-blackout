@@ -1,12 +1,13 @@
 package ai.rever.boss.plugin.dynamic.blackout
 
 import ai.rever.boss.plugin.dynamic.blackout.application.Session
-import ai.rever.boss.plugin.dynamic.blackout.engine.Difficulty
-import ai.rever.boss.plugin.dynamic.blackout.ui.BlackoutBoard
+import ai.rever.boss.plugin.dynamic.blackout.ui.EscapeBoard
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 /**
@@ -21,15 +22,27 @@ fun main() = application {
     val session = remember { Session() }
     val smoke = System.getProperty("blackout.smokeSeconds")?.toIntOrNull()
 
-    Window(onCloseRequest = { session.dispose(); exitApplication() }, title = "BLACKOUT - UI harness") {
-        BlackoutBoard(session, null)
+    Window(onCloseRequest = { session.dispose(); exitApplication() }, title = "BLACKOUT - UI harness",
+        state = rememberWindowState(width = 1120.dp, height = 900.dp)) {
+        EscapeBoard(session, null)
         if (smoke != null) {
             LaunchedEffect(Unit) {
                 // Render the opening screen, then a live case, then leave.
                 delay(1_500)
-                session.start(Difficulty.OPERATOR)
+                session.startEscape(seed = 42)
                 delay(smoke * 1_000L)
-                println("BLACKOUT smoke test: board rendered, case ${session.game?.id} opened, closing.")
+                System.getProperty("blackout.capturePath")?.let { destination ->
+                    window.toFront()
+                    window.requestFocus()
+                    delay(700)
+                    check(window.isFocused) { "Test window is obscured; refusing to capture another application." }
+                    // Capture only this explicitly launched test window, never the user's desktop.
+                    val location = window.locationOnScreen
+                    val bounds = java.awt.Rectangle(location.x, location.y, window.width, window.height)
+                    val screenshot = java.awt.Robot().createScreenCapture(bounds)
+                    javax.imageio.ImageIO.write(screenshot, "png", java.io.File(destination))
+                }
+                println("BLACKOUT smoke test: escape board rendered, room ${session.escape?.id} opened, closing.")
                 session.dispose()
                 exitApplication()
             }

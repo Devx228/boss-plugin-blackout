@@ -1,5 +1,21 @@
 # Evidence and acceptance gates
 
+## Current escape-room iteration (0.4.0)
+
+The default game is now the escape room described in ESCAPE-ROOM.md. Historical evidence
+below is preserved and must not be applied to 0.4.0.
+
+First compile attempt: main source compiled; test compilation failed on two incorrect
+references in EscapeTest (EscapeStage package and AiToolSpec inputSchema property). Those
+references have been corrected in source. Final build/test attempt passed on JDK 17,
+Windows 11: EscapeTest 16 tests, 0 failures, 0 errors, 0 skipped, including 100 seeded
+legal-channel escape solutions. No human or real-model room playtest,
+BOSS 0.4.0 load/lifecycle check, or 0.4.0 persistence check has been performed.
+
+See HANDOFF.md for the user's two-compilation limit and the next-agent checklist.
+
+## Historical investigation evidence (0.3.0)
+
 ## Measured
 
 `./gradlew build` compiles the plugin and runs 40 tests, all passing. Kotlin 2.3.0 on a
@@ -34,6 +50,15 @@ The suite covers:
 `./gradlew smokeUi` opens the board headfully, opens a case and exits, which turns "does it
 draw" into a pass or fail rather than a screenshot somebody has to look at. It passes.
 
+**The plugin has loaded into a running BOSS build, at the previous version.** The host's own
+records show it. `~/.boss_debug/plugins/installed.json` registers
+`ai.rever.boss.plugin.dynamic.blackout` at version 0.2.0, enabled, installed 12 September
+2026. `~/.boss_debug/mcp-calls.jsonl` records 14 tool calls against that provider on the same
+evening: eight `observe`, two `scan`, two `message` and two `commit`, with the early calls
+erroring and later ones succeeding. That is evidence that registration, the MCP provider and
+the agent-facing tool surface work inside the host. It says nothing about version 0.3.0,
+which has not been installed, and nothing about disable, reload or disposal.
+
 ## Not validated
 
 - **Enjoyment.** No human has played a case. There is no playtest, no onboarding study and
@@ -43,8 +68,8 @@ draw" into a pass or fail rather than a screenshot somebody has to look at. It p
   cost, failure handling and provider differences are all unmeasured. The system prompt has
   not been tested against a real model.
 - **MCP transport end to end.** Tool handlers are tested directly, not through a real client.
-- **BOSS lifecycle.** Install, open, close, disable, re-enable, reload and disposal are
-  unverified. The JAR builds; that is all it proves.
+- **BOSS lifecycle for this version.** Version 0.3.0 has not been loaded into a running
+  BOSS build. Close, disable, re-enable, reload and disposal are unverified at any version.
 - **Persistence.** `ProfileStore` degrades quietly when storage is absent, which is tested by
   construction but not against a real `PluginStorageProvider`.
 - **Difficulty.** The walk and battery numbers are guesses. Nothing has been tuned against a

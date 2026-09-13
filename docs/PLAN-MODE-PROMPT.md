@@ -1,5 +1,9 @@
 # Paste this into Plan Mode
 
+> ARCHIVED PROMPT. This planning phase was completed and implementation approved.
+> The user subsequently chose a timed human + AI escape room. Read ../HANDOFF.md and
+> ESCAPE-ROOM.md for current work; the old PLAN ONLY instruction below is historical.
+
 We are building BLACKOUT: Rival Crews, a BOSS Console hackathon game. Work in
 D:\boss-plugin-blackout.
 Host source: C:\Users\devan\OneDrive\Desktop\BOSS-risa.

@@ -1,34 +1,32 @@
 package ai.rever.boss.plugin.dynamic.blackout.application
 
-import ai.rever.boss.plugin.dynamic.blackout.engine.Difficulty
 import java.security.SecureRandom
 
-/** One local pilot seat plus one archivist seat. The BOSS registry cannot identify callers. */
+/** One local human + companion seat. The BOSS registry cannot identify individual callers. */
 class Session {
-    @Volatile var game: Investigation? = null
+    @Volatile var escape: Escape? = null
         private set
 
+    @Synchronized fun startEscape(seed: Long? = null): Escape {
+        check(!disposed)
+        partner?.reset()
+        escape?.interrupt()
+        return Escape(seed ?: SecureRandom().nextLong()).also { escape = it }
+    }
+
+    @Synchronized fun currentEscape(): Escape {
+        if (disposed) throw GameError("UNAVAILABLE", "Plugin is disabled.")
+        return escape ?: throw GameError("NO_ROOM", "Ask the human to enter the room in BLACKOUT.")
+    }
     @Volatile var disposed = false
         private set
 
     /** Set once by the plugin when a host AI gateway is available. Null in the standalone harness. */
-    @Volatile var archivist: Archivist? = null
-
-    @Synchronized fun start(difficulty: Difficulty = Difficulty.OPERATOR, seed: Long? = null): Investigation {
-        check(!disposed)
-        archivist?.reset()
-        val chosen = seed ?: SecureRandom().nextLong()
-        return Investigation(chosen, difficulty).also { game = it }
-    }
-
-    @Synchronized fun current(): Investigation {
-        if (disposed) throw GameError("UNAVAILABLE", "Plugin is disabled.")
-        return game ?: throw GameError("NO_CASE", "Ask the pilot to open a case in BLACKOUT.")
-    }
+    @Volatile var partner: Companion? = null
 
     @Synchronized fun dispose() {
         disposed = true
-        archivist?.stop()
-        game?.interrupt()
+        partner?.stop()
+        escape?.interrupt()
     }
 }
