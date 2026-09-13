@@ -1,5 +1,9 @@
 # Product brief for planning
 
+> Historical combat brief. Implementation was approved, then the user replaced the
+> default game with an escape room. Current scope and rules: ESCAPE-ROOM.md.
+> No dated milestone schedule; progress is recorded through completion evidence in HANDOFF.
+
 ## User intent
 
 Build a memorable, real BOSS hackathon contribution: a playable game for teams of

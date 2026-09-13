@@ -1,10 +1,10 @@
 package ai.rever.boss.plugin.dynamic.blackout
 
 import ai.rever.boss.plugin.api.*
-import ai.rever.boss.plugin.dynamic.blackout.application.Archivist
+import ai.rever.boss.plugin.dynamic.blackout.application.Companion
 import ai.rever.boss.plugin.dynamic.blackout.application.Session
-import ai.rever.boss.plugin.dynamic.blackout.mcp.BlackoutTools
-import ai.rever.boss.plugin.dynamic.blackout.ui.BlackoutBoard
+import ai.rever.boss.plugin.dynamic.blackout.ui.EscapeBoard
+import ai.rever.boss.plugin.dynamic.blackout.mcp.EscapeTools
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.runtime.Composable
@@ -46,8 +46,8 @@ data class BlackoutInfo(override val id: String) : TabInfo {
 class BlackoutPlugin : DynamicPlugin {
     override val pluginId = PLUGIN_ID
     override val displayName = "BLACKOUT"
-    override val version = "0.3.0"
-    override val description = "A human walks a dark station, an AI agent reads its records, and only together can they find the fault"
+    override val version = "0.4.0"
+    override val description = "A human and an AI companion solve a sealed room together before the air runs out"
     override val author = "BLACKOUT contributors"
 
     private var context: PluginContext? = null
@@ -58,25 +58,28 @@ class BlackoutPlugin : DynamicPlugin {
         this.context = context
         session = Session()
         val storage = context.pluginStorageFactory?.createStorage(PLUGIN_ID)
-        val tools = BlackoutTools(session)
-        context.registerMcpToolProvider(tools)
+        val tools = EscapeTools(session)
+        context.registerMcpToolProvider(object : McpToolProvider {
+            override val providerId = PLUGIN_ID
+            override fun tools() = tools.tools()
+        })
 
         // The host gateway can hold the archivist's seat through exactly these tools.
         // When the host exposes none, the seat stays open for an external MCP agent.
         val gateway = runCatching { context.getPluginAPI(AiGatewayAPI::class.java) }.getOrNull()
-        val archivist = Archivist(gateway, tools, session)
-        session.archivist = archivist
-        archivist.start(context.pluginScope)
+        val partner = Companion(gateway, tools, session)
+        session.partner = partner
+        partner.start(context.pluginScope)
 
         context.tabRegistry.registerTabType(BlackoutTab) { info, componentContext ->
             object : TabComponentWithUI, ComponentContext by componentContext {
                 override val tabTypeInfo = BlackoutTab
                 override val config = info
-                @Composable override fun Content() { BlackoutBoard(session, storage) }
+                @Composable override fun Content() { EscapeBoard(session, storage) }
             }
         }
         job = context.pluginScope.launch {
-            while (isActive) { session.game?.tick(); delay(250) }
+            while (isActive) { session.escape?.tick(); delay(250) }
         }
     }
 

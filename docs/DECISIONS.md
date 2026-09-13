@@ -1,5 +1,13 @@
 # Decisions
 
+## Superseding direction: escape room
+
+The user requested a minimal, fun, timed human + AI escape room and explicitly permitted
+improving the prototype's rules and UI. `ESCAPE-ROOM.md` is the current specification.
+The default now has three linked puzzles and a cooperative door release. Physical clues
+remain human-owned; manuals remain agent-owned. The investigation decisions below are
+historical and still apply only if editing the retained investigation generator.
+
 Decisions settled in code are recorded here with the reason and the trigger that would
 reopen them. Anything under "Still open" is not decided.
 

@@ -1,5 +1,19 @@
 # Layout
 
+## Current default: escape room
+
+`engine/EscapeRoom.kt` generates private scenario content. `application/Escape.kt` owns
+the synchronized game and separate pilot/agent views. `mcp/EscapeTools.kt` validates the
+six v2 tools. `ui/EscapeBoard.kt` renders the responsive room, controls and channel;
+`ui/RoomScene.kt` draws the flat room with accessible object buttons. The plugin and
+standalone harness open EscapeBoard. Session owns escape lifetime, and Archivist drives
+the optional real gateway companion with the same v2 definitions. Legacy investigation
+files below are retained; its v1 tools are not registered in the default plugin.
+
+See ESCAPE-ROOM.md and ../HANDOFF.md before changing either mode.
+
+## Historical investigation layout
+
 ```
 engine/Case.kt              Pure case generation. No Compose, no BOSS API, no I/O.
                             Seeded, deterministic, and the only place the solution exists.
