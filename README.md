@@ -53,7 +53,7 @@ The companion only learns what is in the room when the human presses **Share clu
 .\gradlew.bat clean test buildPluginJar
 ```
 
-On macOS or Linux use `./gradlew clean test buildPluginJar`. The plugin JAR is written to `build/libs/boss-plugin-blackout-0.5.0.jar`.
+On macOS or Linux use `./gradlew clean test buildPluginJar`. The plugin JAR is written to `build/libs/boss-plugin-blackout-0.6.0.jar`.
 
 Install it in BOSS:
 
@@ -149,15 +149,17 @@ On wide tabs (1100 dp and wider) the screen has four areas. Narrower tabs stack 
 ## How a room is played
 
 Each room is generated from a random seed. The seed chooses:
-- one of three incidents,
+- one of four incidents,
 - the fitted breaker symbols and manual priorities,
 - load and supply values,
-- the cipher word and shift,
+- the cipher word, shift and the cabinet serial plate,
 - the waveform and channel tables,
 - the strip labels and order,
 - the door seal and exit channel table.
 
 The rooms always have the same four stages, in order. A stage's objects and remote systems cannot be used before it.
+
+Every stage's remote action (route power, tune decoder, sync recorder, arm exit) also waits for the human to share that stage's clue. A companion that acts first gets `CLUE_NOT_SHARED`, which costs no time, so it cannot guess its way through the room alone.
 
 For every object the human must:
 1. Select the object (in the room or with the object buttons). This inspects it and reveals its clue text in the device.
@@ -184,10 +186,10 @@ The companion reads the manuals once (`archive` with `ALL`), then answers each s
 
 ## Stage 2: Cabinet
 
-**Human sees** (cabinet device): the encoded label as letter tiles, the decoder dial with the current offset, a password field and an A–Z keypad.
+**Human sees** (cabinet device): the encoded label as letter tiles, the decoder dial with the current offset, a password field and an A–Z keypad. The shared clue also carries the cabinet's serial plate (for example `T-325`).
 
 **Companion does:**
-1. Tunes the decoder to the offset in the cabinet manual (1–5). A wrong offset is a mistake penalty and can be retuned.
+1. Looks up the serial plate's letter prefix in the cabinet manual, which lists six prefixes with offsets 1–5, and tunes the decoder to that offset. Without the plate the manual cannot say which offset applies. A wrong offset is a mistake penalty and can be retuned.
 2. Decodes the label by moving each letter back by the offset, wrapping Z to A, and messages the word.
 
 **Human does:** types the word (letters only, up to 12, shown in capitals) with the keyboard or keypad (⌫ deletes, CLR clears) and presses **UNLOCK** or Enter. UNLOCK is enabled once the decoder has been tuned.
@@ -228,8 +230,8 @@ After power is restored the companion can use `control_environment`. These contr
 
 | System | Settings | Effect |
 | --- | --- | --- |
-| LIGHTING | EMERGENCY, WORK, ULTRAVIOLET | Changes the room light. ULTRAVIOLET reveals hidden inspection ink on the wall (discovery 1 of 2). |
-| VENTILATION | INTAKE, EXHAUST, HOLD | Only the setting named for the incident in the ENVIRONMENT record is safe. The safe setting clears the air and reveals a detail (discovery 2 of 2). Any other setting is a mistake penalty. |
+| LIGHTING | EMERGENCY, WORK, ULTRAVIOLET | Changes the room light. ULTRAVIOLET reveals hidden inspection ink on the wall (discovery 1 of 2) and a maintenance tag that makes the human's next hint free. |
+| VENTILATION | INTAKE, EXHAUST, HOLD | Only the setting named for the incident in the ENVIRONMENT record is safe. The safe setting clears the air, reveals a detail (discovery 2 of 2) and recovers air once: 30 s in Standard, 15 s in Showcase, never above the starting reserve. Any other setting is a mistake penalty. |
 
 Discoveries appear in the room, in the pocket log and in the results.
 
@@ -240,10 +242,11 @@ Discoveries appear in the room, in the pocket log and in the results.
 | Air | 10:00 | 4:00 |
 | Mistake penalty | 15 s | 10 s |
 | Hint penalty | 20 s | 10 s |
+| Safe ventilation bonus | +30 s | +15 s |
 
 - **Mistakes** are wrong but well-formed answers, from either player: wrong supply mode, breaker order, word, strip order, decoder offset, recorder channel, exit channel or ventilation setting. Each subtracts the penalty from the remaining air. There is no lockout.
 - **Invalid input** (missing prerequisites, malformed values, wrong stage) is rejected with an explanation and costs no time.
-- **Hints:** three per room. Each gives a context-sensitive tip for the current stage and costs the hint penalty.
+- **Hints:** three per room. Each gives a context-sensitive tip for the current stage and costs the hint penalty, unless ultraviolet light has earned a free one.
 - **Pause** freezes the air timer and the exit release timer, and marks the run as practice for the rest of the room. The door cannot be opened and the exit cannot be armed while paused. When the BLACKOUT board is closed or disposed during a room, the room is paused.
 - **Leave** ends the room as INTERRUPTED after confirmation.
 - If the air reaches zero, including through a penalty, the room ends immediately as FAILED.
@@ -345,7 +348,7 @@ Error codes and categories:
 | Category | Codes | Meaning |
 | --- | --- | --- |
 | SESSION | `NO_ROOM`, `STALE_ROOM`, `ROOM_CLOSED`, `UNAVAILABLE` | No room, an old `roomId` (observe again), the room has ended, or the plugin is disabled. |
-| PREREQUISITE | `WRONG_STAGE`, `NO_POWER`, `REMOTE_POWER_REQUIRED`, `REMOTE_DECODER_REQUIRED`, `REMOTE_RECORDER_REQUIRED` | The action belongs to another stage or needs an earlier step. |
+| PREREQUISITE | `WRONG_STAGE`, `NO_POWER`, `CLUE_NOT_SHARED`, `REMOTE_POWER_REQUIRED`, `REMOTE_DECODER_REQUIRED`, `REMOTE_RECORDER_REQUIRED` | The action belongs to another stage, needs an earlier step, or needs the human to share the stage's clue first. |
 | LIMIT | `RATE_LIMIT`, `BUDGET_EXHAUSTED` | Observe called within one second, or a per-room budget is used up. |
 | INPUT | `INVALID_ARGUMENTS`, `UNKNOWN_TOOL`, `INVALID_QUERY`, `INVALID_TEXT`, `INVALID_REQUEST_ID`, `REQUEST_CONFLICT`, `INVALID_NUMBER`, `DIVIDE_BY_ZERO`, `INVALID_OPERATION`, `INVALID_MODE`, `INVALID_SHIFT`, `INVALID_CHANNEL`, `INVALID_SYSTEM`, `INVALID_SETTING`, `PAUSED` | Correct the arguments or wait. |
 
@@ -372,13 +375,14 @@ This section contains puzzle content.
 
 | Incident | People | Safe ventilation | Word pool |
 | --- | --- | --- | --- |
-| COOLANT | Mara, Ivo | EXHAUST | LIGHT, HAVEN, ALIVE |
-| FLOOD | Sena, Orin | INTAKE | SHORE, ABOVE, DRY |
-| SPORE | Tali, Ren | HOLD | CLEAN, BLOOM, BREATH |
+| COOLANT | Mara, Ivo | EXHAUST | LIGHT, HAVEN, ALIVE, FROST, STEADY, CALM |
+| FLOOD | Sena, Orin | INTAKE | SHORE, ABOVE, DRY, HARBOR, ANCHOR, DRIFT |
+| SPORE | Tali, Ren | HOLD | CLEAN, BLOOM, BREATH, SEED, FILTER, GARDEN |
+| SURGE | Juno, Kai | INTAKE | SHIELD, GROUND, AURORA, STATIC, SIGNAL, DAWN |
 
 - Symbols: SUN, WAVE, LEAF, MOON, EYE, STAR. Three are fitted per room; each has a priority from 1 to 6 in the power manual.
 - Current values: 4, 5, 8, 10, 14 or 16 A. Supply: 24 or 48 V. Load shown = amps × volts.
-- Cipher shift: 1–5. The label is the word shifted forward.
+- Cipher shift: 1–5. The label is the word shifted forward. The serial plate is one of K, M, R, T, V, X plus three digits; the cabinet manual maps all six prefixes to offsets, and only the plate's prefix is the real one.
 - Waveform and door seal: one symbol each, mapped to channels A–F by separate tables in the recorder index and exit manual.
 - Strips: each incident has an alarm line, a shelter line and a rescue line, shuffled and labelled A, B, C. The correct order is alarm, shelter, rescue.
 - Each incident has its own ending text, two discoveries, a five-line escape epilogue and a five-line trapped epilogue.
@@ -388,7 +392,7 @@ This section contains puzzle content.
 | Command | Purpose |
 | --- | --- |
 | `.\gradlew.bat test` | Run the test suite. |
-| `.\gradlew.bat buildPluginJar` | Build `build/libs/boss-plugin-blackout-0.5.0.jar`. |
+| `.\gradlew.bat buildPluginJar` | Build `build/libs/boss-plugin-blackout-0.6.0.jar`. |
 | `.\gradlew.bat build` | Compile, test and build the JAR. |
 | `.\gradlew.bat runPrototype` | Open the game in a standalone window without BOSS (no AI gateway; an external agent cannot connect). |
 | `.\gradlew.bat smokeUi` | Open the standalone window, start a seeded room, and close. `-PsmokeSeconds=N` sets the duration; `-PcapturePath=file.png` saves a screen capture of the window area, so keep it in front. |
@@ -422,11 +426,14 @@ HANDOFF.md, AGENTS.md        Notes for contributors and coding agents.
 
 ## Tests
 
-`EscapeTest` has 17 tests. They cover:
+`EscapeTest` has 20 tests. They cover:
 
 - 100 seeded rooms escaped using only what each role can legally see, across all incidents.
 - Every puzzle requiring a companion action.
 - Clues reaching the companion only when shared.
+- Remote actions refused, at no time cost, until the stage's clue is shared.
+- The cabinet manual alone never naming the offset.
+- Safe ventilation recovering air once, capped at the starting reserve, and UV earning one free hint.
 - Standard and Showcase timing rules.
 - Recoverable penalties for wrong remote actions.
 - Discoveries from environment controls without skipping stages.

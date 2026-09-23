@@ -14,7 +14,7 @@ class EscapeTools(private val session: Session) {
         definition("message", "Speak to the human through the room terminal. Give one concise next step. Thirty messages per room.", mapOf("roomId" to textSchema(64), "requestId" to textSchema(64), "text" to textSchema(500))),
         definition("calculate", "Use the bounded emergency calculator. Operations are ADD, SUBTRACT, MULTIPLY or DIVIDE on two integers.", mapOf("roomId" to textSchema(64), "requestId" to textSchema(64), "operation" to choices(Arithmetic.entries.map { it.name }), "a" to integerSchema(), "b" to integerSchema())),
         definition("route_power", "Route LOW, NORMAL or HIGH power after calculating current from the human's readings. The human still operates the breakers.", mapOf("roomId" to textSchema(64), "requestId" to textSchema(64), "mode" to choices(PowerMode.entries.map { it.name }))),
-        definition("tune_decoder", "Physically tune the cabinet decoder to offset 1–5 using the cabinet manual. A wrong valid offset costs time but can be corrected.", mapOf("roomId" to textSchema(64), "requestId" to textSchema(64), "shift" to rangeSchema(1, 5))),
+        definition("tune_decoder", "Tune the cabinet decoder to offset 1–5: look up the human's shared serial plate prefix in the cabinet manual. A wrong valid offset costs time but can be corrected.", mapOf("roomId" to textSchema(64), "requestId" to textSchema(64), "shift" to rangeSchema(1, 5))),
         definition("sync_recorder", "Synchronize recorder channel A–F from the human's waveform and the recorder index. The human still orders the strips.", mapOf("roomId" to textSchema(64), "requestId" to textSchema(64), "channel" to choices(CHANNELS))),
         definition("control_environment", "Control optional room systems after power is restored. LIGHTING uses EMERGENCY, WORK or ULTRAVIOLET; VENTILATION uses INTAKE, EXHAUST or HOLD.", mapOf("roomId" to textSchema(64), "requestId" to textSchema(64), "system" to choices(listOf("LIGHTING", "VENTILATION")), "setting" to choices(listOf("EMERGENCY", "WORK", "ULTRAVIOLET", "INTAKE", "EXHAUST", "HOLD")))),
         definition("arm_exit", "Authorize exit channel A–F from the shared door seal and exit manual. The human must turn the handle within 20 seconds.", mapOf("roomId" to textSchema(64), "requestId" to textSchema(64), "channel" to choices(CHANNELS)))
@@ -84,7 +84,7 @@ class EscapeTools(private val session: Session) {
 
     private fun category(code: String) = when (code) {
         "STALE_ROOM", "NO_ROOM", "ROOM_CLOSED", "UNAVAILABLE" -> "SESSION"
-        "WRONG_STAGE", "NO_POWER", "REMOTE_POWER_REQUIRED", "REMOTE_DECODER_REQUIRED", "REMOTE_RECORDER_REQUIRED" -> "PREREQUISITE"
+        "WRONG_STAGE", "NO_POWER", "CLUE_NOT_SHARED", "REMOTE_POWER_REQUIRED", "REMOTE_DECODER_REQUIRED", "REMOTE_RECORDER_REQUIRED" -> "PREREQUISITE"
         "RATE_LIMIT", "BUDGET_EXHAUSTED" -> "LIMIT"
         else -> "INPUT"
     }

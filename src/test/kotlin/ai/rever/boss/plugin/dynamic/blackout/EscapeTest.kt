@@ -25,7 +25,7 @@ class EscapeTest {
         game.inspect("cabinet"); game.report("cabinet")
         val cabinet = game.pilotView().objects.first { it.id == "cabinet" }.description
         val cipher = Regex("reads ([A-Z]+)").find(cabinet)!!.groupValues[1]
-        val shift = Regex("shifted forward ([1-5])").find(manual[1])!!.groupValues[1].toInt()
+        val shift = cabinetShift(game, manual[1])
         game.tuneDecoder("decoder", shift)
         val decoded = cipher.map { 'A' + ((it - 'A' - shift + 26) % 26) }.joinToString("")
         assertTrue(game.submitPassword(decoded))
@@ -37,8 +37,8 @@ class EscapeTest {
         game.syncRecorder("recorder", channel)
         val fragments = game.pilotView().fragments
         fun rank(text: String) = when {
-            listOf("alarm", "ruptured", "sensor found").any { it in text } -> 0
-            listOf("Power is gone", "pumps stopped", "Airflow is gone").any { it in text } -> 1
+            listOf("alarm", "ruptured", "sensor found", "storm hit").any { it in text } -> 0
+            listOf("Power is gone", "pumps stopped", "Airflow is gone", "Everything went dark").any { it in text } -> 1
             else -> 2
         }
         assertTrue(game.submitStory(fragments.sortedBy { rank(it.text) }.map { it.id }))
@@ -51,6 +51,12 @@ class EscapeTest {
         return Regex("$seal = ([A-F])").find(game.archive("EXIT").single())!!.groupValues[1]
     }
 
+    /** The human's serial plate plus the companion's prefix table; neither alone gives the offset. */
+    private fun cabinetShift(game: Escape, cabinetManual: String): Int {
+        val serial = Regex("Serial plate: ([A-Z])-\\d+").find(game.pilotView().objects.first { it.id == "cabinet" }.description)!!.groupValues[1]
+        return Regex("\\b$serial = ([1-5])").find(cabinetManual)!!.groupValues[1].toInt()
+    }
+
     @Test fun oneHundredLegalCrewsEscapeAcrossEveryIncident() {
         val incidents = mutableSetOf<String>()
         repeat(100) { seed ->
@@ -60,13 +66,14 @@ class EscapeTest {
             incidents += room.debrief().incidentId
             assertEquals(0, room.debrief().mistakes)
         }
-        assertEquals(setOf("COOLANT", "FLOOD", "SPORE"), incidents)
+        assertEquals(setOf("COOLANT", "FLOOD", "SPORE", "SURGE"), incidents)
     }
 
     @Test fun everyPuzzleRequiresAnAgentMutation() {
         val room = Escape(42, clock={0}); val manual = records(room)
         room.inspect("panel")
         assertEquals("REMOTE_POWER_REQUIRED", assertFailsWith<GameError> { room.submitPower(room.pilotView().symbols) }.code)
+        room.report("panel")
         val panel=room.pilotView().objects.first{it.id=="panel"}.description
         val amps=Regex("Load: (\\d+)").find(panel)!!.groupValues[1].toInt()/Regex("Supply: (\\d+)").find(panel)!!.groupValues[1].toInt()
         room.routePower("p",if(amps<=6) PowerMode.LOW else if(amps<=12) PowerMode.NORMAL else PowerMode.HIGH)
@@ -96,8 +103,8 @@ class EscapeTest {
     }
 
     @Test fun wrongRemoteActionsPenalizeAndRemainRecoverable() {
-        val room=Escape(7,clock={0}); solvePower(room)
-        val correct=Regex("Tune the decoder to ([1-5])").find(room.archive("CABINET").single())!!.groupValues[1].toInt()
+        val room=Escape(7,clock={0}); solvePower(room); room.inspect("cabinet"); room.report("cabinet")
+        val correct=cabinetShift(room, room.archive("CABINET").single())
         val wrong=if(correct==1) 2 else 1
         room.tuneDecoder("wrong",wrong)
         assertEquals(585,room.status().secondsLeft)
@@ -126,7 +133,7 @@ class EscapeTest {
     }
 
     @Test fun invalidInputDoesNotSpendTimeAndWrongAnswerDoes() {
-        val room=Escape(42,clock={0});val manual=records(room);room.inspect("panel")
+        val room=Escape(42,clock={0});val manual=records(room);room.inspect("panel");room.report("panel")
         assertFailsWith<GameError>{room.submitPower(listOf("SUN","SUN","SUN"))}
         assertEquals(600,room.status().secondsLeft)
         val clue=room.pilotView().objects.first{it.id=="panel"}.description
@@ -201,8 +208,50 @@ class EscapeTest {
         assertFalse(room.debrief().companion.verified)
     }
 
+    @Test fun remoteSystemsWaitForTheSharedClue() {
+        val room = Escape(42, clock = { 0 }); val manual = records(room)
+        room.inspect("panel")
+        assertEquals("CLUE_NOT_SHARED", assertFailsWith<GameError> { room.routePower("early", PowerMode.LOW) }.code)
+        // An early look at the door shares only the sealed casing, not the routing seal.
+        room.inspect("door"); room.report("door")
+        solveToDoor(room)
+        assertEquals(600, room.status().secondsLeft)
+        val seal = Regex("Routing seal: ([A-Z]+)").find(room.pilotView().objects.first { it.id == "door" }.description)!!.groupValues[1]
+        val channel = Regex("$seal = ([A-F])").find(manual[3])!!.groupValues[1]
+        assertEquals("CLUE_NOT_SHARED", assertFailsWith<GameError> { room.armExit("guess", channel) }.code)
+        assertEquals(0, room.status().mistakes)
+        room.report("door"); room.armExit("guess", channel); assertTrue(room.escape())
+    }
+
+    @Test fun cabinetManualAloneCannotNameTheOffset() {
+        repeat(100) { seed ->
+            val room = Escape(seed.toLong(), clock = { 0 })
+            val manual = room.archive("CABINET").single()
+            assertEquals(6, Regex("\\b[KMRTVX] = [1-5]").findAll(manual).count(), manual)
+        }
+        val tools = EscapeTools(Session())
+        assertTrue("serial" in tools.tools().first { it.name.endsWith("tune_decoder") }.description)
+    }
+
+    @Test fun optionalSystemsRecoverAirAndEarnAFreeHint() {
+        var now = 0L; val room = Escape(9, clock = { now }); solvePower(room)
+        val safe = Regex("incident [A-Z]+: (INTAKE|EXHAUST|HOLD)").find(room.archive("ENVIRONMENT").single())!!.groupValues[1]
+        now = 100_000
+        room.controlEnvironment("vent", "VENTILATION", safe)
+        assertEquals(530, room.status().secondsLeft)
+        room.controlEnvironment("vent-again", "VENTILATION", safe)
+        assertEquals(530, room.status().secondsLeft)
+        room.controlEnvironment("uv", "LIGHTING", "ULTRAVIOLET")
+        room.hint(); assertEquals(530, room.status().secondsLeft)
+        room.hint(); assertEquals(510, room.status().secondsLeft)
+        // The bonus never fills the reserve past its starting size.
+        val fresh = Escape(9, clock = { 0 }); solvePower(fresh)
+        fresh.controlEnvironment("vent", "VENTILATION", safe)
+        assertEquals(600, fresh.status().secondsLeft)
+    }
+
     private fun solvePower(room:Escape) {
-        val manual=records(room);room.inspect("panel")
+        val manual=records(room);room.inspect("panel");room.report("panel")
         val clue=room.pilotView().objects.first{it.id=="panel"}.description
         val watts=Regex("Load: (\\d+)").find(clue)!!.groupValues[1].toInt();val volts=Regex("Supply: (\\d+)").find(clue)!!.groupValues[1].toInt()
         val amps=watts/volts

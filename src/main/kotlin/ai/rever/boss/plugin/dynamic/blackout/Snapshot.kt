@@ -78,7 +78,8 @@ private class Companion2 {
 
     fun cabinet(room: Escape, solve: Boolean = true) {
         room.inspect("cabinet"); room.report("cabinet")
-        val shift = Regex("shifted forward (\\d)").find(record("CABINET MANUAL"))!!.groupValues[1].toInt()
+        val serial = Regex("Serial plate: ([A-Z])-").find(room.pilotView().objects.first { it.id == "cabinet" }.description)!!.groupValues[1]
+        val shift = Regex("\\b$serial = (\\d)").find(record("CABINET MANUAL"))!!.groupValues[1].toInt()
         room.tuneDecoder(id(), shift)
         val cipher = Clues.cabinet(room.pilotView()).cipher.orEmpty()
         val word = cipher.map { 'A' + ((it - 'A' - shift + 26) % 26) }.joinToString("")

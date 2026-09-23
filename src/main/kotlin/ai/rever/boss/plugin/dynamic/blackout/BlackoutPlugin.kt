@@ -46,7 +46,7 @@ data class BlackoutInfo(override val id: String) : TabInfo {
 class BlackoutPlugin : DynamicPlugin {
     override val pluginId = PLUGIN_ID
     override val displayName = "BLACKOUT"
-    override val version = "0.5.0"
+    override val version = "0.6.0"
     override val description = "A human and an AI remote-systems companion escape a dark, reactive maintenance room"
     override val author = "BLACKOUT contributors"
 
