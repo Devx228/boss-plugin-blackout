@@ -5,11 +5,13 @@ BLACKOUT is a timed room for a human and a real AI remote-systems companion. The
 ## Play loop
 
 1. The human shares fitted symbols and electrical readings. The companion calculates current and routes power; the human sets the breaker order.
-2. The human shares the powered cabinet label. The companion tunes the decoder and derives the word; the human enters it.
+2. The human shares the powered cabinet label and serial plate. The companion looks up the offset for the plate's prefix, tunes the decoder and derives the word; the human enters it.
 3. The human shares the waveform and memory strips. The companion synchronizes the recorder; the human orders the cause-and-effect timeline.
 4. The human shares the exit seal. The companion arms its channel for 20 seconds; the human turns the handle.
 
-Three seeded incident packs change the characters, emergency, story, passwords and environmental discoveries without changing these rules.
+Every remote action waits until the human has shared that stage's clue (`CLUE_NOT_SHARED`, no time cost), so neither seat can finish a stage alone.
+
+Four seeded incident packs change the characters, emergency, story, passwords and environmental discoveries without changing these rules.
 
 ## Timing
 
@@ -17,7 +19,7 @@ Standard mode has 600 seconds, 15-second mistakes and 20-second hints. Showcase 
 
 ## Remote systems
 
-The companion may route power, tune the decoder, synchronize the recorder and arm the exit only at their corresponding stages. After power restoration it may also control lighting and ventilation. Ultraviolet light and the incident's safe ventilation mode reveal optional physical details to the human. Incorrect valid remote settings apply the current mode's normal penalty and remain recoverable.
+The companion may route power, tune the decoder, synchronize the recorder and arm the exit only at their corresponding stages. After power restoration it may also control lighting and ventilation. Ultraviolet light and the incident's safe ventilation mode reveal optional physical details to the human. Ultraviolet also makes the next hint free, and the safe ventilation mode recovers air once (30 seconds in Standard, 15 in Showcase, capped at the starting reserve). Incorrect valid remote settings apply the current mode's normal penalty and remain recoverable.
 
 Nine `blackout_v3_*` tools provide observe, archive, message, calculate, route power, tune decoder, synchronize recorder, control environment and arm exit. Every mutation has an idempotent request ID and current room ID. Strict schemas, budgets, rate limits, stale-room rejection and terminal immutability apply. There is no agent tool for a human action.
 

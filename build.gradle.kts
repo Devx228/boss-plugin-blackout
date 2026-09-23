@@ -7,7 +7,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.3.0"
 }
 group = "ai.rever.boss.plugin.dynamic"
-version = "0.5.0"
+version = "0.6.0"
 repositories { google(); mavenCentral() }
 kotlin { jvmToolchain(17); compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
 val apiJar = files(providers.gradleProperty("bossApiJar").getOrElse("libs/boss-plugin-api-1.0.89.jar"))
@@ -26,6 +26,8 @@ dependencies {
 }
 tasks.test { useJUnitPlatform(); maxParallelForks = 1 }
 tasks.processResources {
+    // Without this Gradle treats the expanded manifest as up to date after a version bump.
+    inputs.property("version", project.version)
     filesMatching("**/plugin.json") { expand("version" to project.version) }
 }
 tasks.register<Jar>("buildPluginJar") {

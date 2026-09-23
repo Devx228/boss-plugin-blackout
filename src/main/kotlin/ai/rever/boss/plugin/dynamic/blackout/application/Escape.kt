@@ -18,9 +18,10 @@ class GameError(val code: String, override val message: String) : IllegalArgumen
 @Serializable enum class LightingMode { EMERGENCY, WORK, ULTRAVIOLET }
 @Serializable enum class VentilationMode { INTAKE, EXHAUST, HOLD }
 
-@Serializable enum class RoomMode(val seconds: Int, val mistakePenalty: Int, val hintPenalty: Int) {
-    STANDARD(600, 15, 20),
-    SHOWCASE(240, 10, 10)
+/** [airBonus] is what stabilizing the incident's safe ventilation gives back, once per room. */
+@Serializable enum class RoomMode(val seconds: Int, val mistakePenalty: Int, val hintPenalty: Int, val airBonus: Int) {
+    STANDARD(600, 15, 20, 30),
+    SHOWCASE(240, 10, 10, 15)
 }
 
 @Serializable data class CompanionDescriptor(
@@ -140,6 +141,7 @@ class Escape(
     private var routes = 0
     private var calculations = 0
     private var controls = 0
+    private var freeHint = false
     private var systems = RemoteSystemState()
     private var lastObserve: Long? = null
     private var feedback = "Inspect the breaker panel and share its readings with your companion."
@@ -248,9 +250,11 @@ class Escape(
     @Synchronized fun hint() {
         active()
         if (hints >= 3) fail("NO_HINTS", "All three hints have been used.")
-        hints++; deadline -= mode.hintPenalty * 1000L
+        val penalty = if (freeHint) 0 else mode.hintPenalty
+        hints++; freeHint = false; deadline -= penalty * 1000L
         feedback = contextualHint()
-        changedByPilot(); emit("HINT", stage.name.lowercase(), "Hint requested"); event("Hint requested (${mode.hintPenalty}-second penalty)"); tick()
+        changedByPilot(); emit("HINT", stage.name.lowercase(), "Hint requested")
+        event(if (penalty == 0) "Hint requested (free, from the UV maintenance tag)" else "Hint requested ($penalty-second penalty)"); tick()
     }
 
     @Synchronized fun observe(): EscapeAgentView {
@@ -274,10 +278,10 @@ class Escape(
         val priorities = scenario.manualOrder.mapIndexed { i, symbol -> "$symbol = ${i + 1}" }.sorted()
         val records = listOf(
             "POWER MANUAL: Ask for the fitted symbols, load watts and supply volts. Calculate amps = watts DIVIDE volts. Route 1–6 A LOW, 7–12 A NORMAL, 13–18 A HIGH. Energize fitted symbols in ascending priority. ${priorities.joinToString("; ")}.",
-            "CABINET MANUAL: The label was shifted forward ${scenario.shift}. Tune the decoder to ${scenario.shift}, decode by moving each letter BACKWARD ${scenario.shift}, then ask the human to enter the word.",
+            "CABINET MANUAL: Each cabinet label is shifted forward by the offset for its serial plate prefix: ${scenario.serialOffsets.entries.joinToString("; ") { "${it.key} = ${it.value}" }}. Ask the human for the label and serial plate, tune the decoder to that offset, decode by moving each letter BACKWARD by it, then ask the human to enter the word.",
             "RECORDER INDEX: Ask for the waveform and strips. Waveform channels: ${scenario.recorderChannels.mapIndexed { i, symbol -> "$symbol = ${'A' + i}" }.joinToString("; ")}. Synchronize that channel. Order causes: safety shutdown, shelter response, rescue plan.",
             "EXIT MANUAL: Ask for the door seal. Channels: ${scenario.channelOrder.mapIndexed { i, symbol -> "$symbol = ${'A' + i}" }.joinToString("; ")}. Arm it; the human has 20 seconds to turn the handle.",
-            "ENVIRONMENT: UV lighting exposes inspection ink. Safe ventilation for incident ${scenario.incident.id}: ${scenario.incident.safeVentilation}.",
+            "ENVIRONMENT: UV lighting exposes inspection ink and a maintenance tag that makes the human's next hint free. Safe ventilation for incident ${scenario.incident.id}: ${scenario.incident.safeVentilation}; stabilizing it recovers ${mode.airBonus} seconds of air once. Unsafe modes cost time.",
             "INCIDENT ${scenario.incident.id}: The first action prevented a disaster; the seal protected the occupant; the companion circuit was deliberately left online."
         )
         val result = if (query.trim().equals("ALL", true)) records else records.filter { it.contains(query.trim(), true) }
@@ -310,7 +314,7 @@ class Escape(
         }
 
     @Synchronized fun routePower(requestId: String, mode: PowerMode): EscapeReceipt = mutate(requestId, "route:$mode") {
-        requireStage(EscapeStage.POWER)
+        requireStage(EscapeStage.POWER); requireShared("panel")
         if (routes >= 8) fail("BUDGET_EXHAUSTED", "Eight power configurations per room.")
         routes++; systems = systems.copy(power = mode)
         activity("ROUTE_POWER", "ROUTE POWER", "Remote supply set to $mode")
@@ -325,7 +329,7 @@ class Escape(
     @Synchronized fun tuneDecoder(requestId: String, shift: Int): EscapeReceipt = mutate(requestId, "decoder:$shift") {
         requireStage(EscapeStage.CABINET)
         if (shift !in 1..5) fail("INVALID_SHIFT", "Choose a decoder offset from 1 to 5.")
-        spendControl()
+        requireShared("cabinet"); spendControl()
         systems = systems.copy(decoderShift = shift)
         if (shift != scenario.shift) {
             activity("DECODER", "TUNE DECODER", "Offset $shift rejected · −${mode.mistakePenalty}s", false)
@@ -342,7 +346,7 @@ class Escape(
     @Synchronized fun syncRecorder(requestId: String, channel: String): EscapeReceipt = mutate(requestId, "recorder:$channel") {
         requireStage(EscapeStage.STORY)
         if (channel !in CHANNELS) fail("INVALID_CHANNEL", "Choose recorder channel A–F.")
-        spendControl(); systems = systems.copy(recorderChannel = channel)
+        requireShared("recorder"); spendControl(); systems = systems.copy(recorderChannel = channel)
         if (channel != requiredRecorderChannel()) {
             activity("RECORDER", "SYNC RECORDER", "Channel $channel rejected · −${mode.mistakePenalty}s", false)
             wrongAgent("The recorder fills with static. That waveform channel is wrong.", "RECORDER_FAIL", "recorder")
@@ -364,7 +368,11 @@ class Escape(
                     spendControl()
                     systems = systems.copy(lighting = value)
                     activity("LIGHTING", "SET LIGHTS", value.name)
-                    if (value == LightingMode.ULTRAVIOLET && discoveries.add(scenario.incident.ultravioletDiscovery)) event("Companion revealed UV evidence")
+                    if (value == LightingMode.ULTRAVIOLET && discoveries.add(scenario.incident.ultravioletDiscovery)) {
+                        freeHint = true
+                        feedback = "Under UV a maintenance tag glows beside the ink. Your next hint costs no air."
+                        event("Companion revealed UV evidence and a free hint")
+                    }
                     emit("LIGHTING", "room", "Lighting changed to $setting")
                     "Lighting set to $setting.${if (value == LightingMode.ULTRAVIOLET) " The human can now see hidden inspection ink." else ""}"
                 }
@@ -378,9 +386,16 @@ class Escape(
                     } else {
                         systems = systems.copy(ventilation = value)
                         activity("VENTILATION", "SET AIRFLOW", "$setting · air clearing")
-                        if (discoveries.add(scenario.incident.ventilationDiscovery)) event("Companion stabilized ventilation")
+                        val fresh = discoveries.add(scenario.incident.ventilationDiscovery)
+                        if (fresh) {
+                            // Capped at a full reserve so the air gauge never reads above 100%.
+                            deadline = minOf(deadline + mode.airBonus * 1000L, now() + mode.seconds * 1000L)
+                            feedback = "Fresh air floods the room. The reserve recovers ${mode.airBonus} seconds."
+                            event("Companion stabilized ventilation (+${mode.airBonus} seconds of air)")
+                        }
                         emit("VENTILATION", "room", "Ventilation stabilized on $setting")
-                        "Ventilation stabilized. The human can see a newly cleared detail."
+                        "Ventilation stabilized. The human can see a newly cleared detail." +
+                            if (fresh) " The air reserve recovered ${mode.airBonus} seconds." else ""
                     }
                 }
                 else -> fail("INVALID_SYSTEM", "Choose LIGHTING or VENTILATION.")
@@ -391,6 +406,7 @@ class Escape(
         requireStage(EscapeStage.EXIT)
         if (pausedAt != null) fail("PAUSED", "Ask the human to resume before arming.")
         if (channel !in CHANNELS) fail("INVALID_CHANNEL", "Choose exit channel A–F.")
+        requireShared("door")
         if (arms >= 12) fail("BUDGET_EXHAUSTED", "Twelve release authorizations per room.")
         arms++
         if (channel != requiredExitChannel()) {
@@ -447,7 +463,7 @@ class Escape(
 
     private fun objectList(): List<RoomObject> {
         val panel = if ("panel" in inspected) "Fitted symbols: ${scenario.symbols.joinToString(", ")}. Load: ${scenario.drawAmps * scenario.supplyVolts} W. Supply: ${scenario.supplyVolts} V." else "Three unmarked breaker levers sit beside a dead current display."
-        val cabinet = if (stage >= EscapeStage.CABINET && "cabinet" in inspected) "The powered label reads ${scenario.cipher}. The remote decoder dial is controlled by your companion." else "A steel cabinet with a dark electronic lock."
+        val cabinet = if (stage >= EscapeStage.CABINET && "cabinet" in inspected) "The powered label reads ${scenario.cipher}. Serial plate: ${scenario.serial}. The remote decoder dial is controlled by your companion." else "A steel cabinet with a dark electronic lock."
         val recorder = if (stage >= EscapeStage.STORY && "recorder" in inspected) "Waveform: ${scenario.recorderWaveform}. Strips: ${scenario.fragments.joinToString(" | ") { "${it.id}: ${it.text}" }}" else "A three-track recorder locked inside the cabinet."
         val door = if (stage == EscapeStage.EXIT && "door" in inspected) "Routing seal: ${scenario.releaseSeal}. The companion must arm its matching channel." else "A pressure door with two isolated release circuits."
         fun shared(label: String, text: String) = reported.any { it.compartment == label && it.text == text }
@@ -482,7 +498,7 @@ class Escape(
 
     private fun contextualHint() = when (stage) {
         EscapeStage.POWER -> if (systems.power == null) "Share watts, volts and symbols. Your companion calculates amps and routes LOW, NORMAL or HIGH." else "Use only fitted symbols, ordered by the manual's ascending priorities."
-        EscapeStage.CABINET -> if (systems.decoderShift == null) "Share the encoded label. Your companion must tune the shift from its cabinet manual." else "Move every encoded letter backward by the tuned offset, wrapping A to Z."
+        EscapeStage.CABINET -> if (systems.decoderShift == null) "Share the label and serial plate. Your companion looks up the offset for that serial and tunes the decoder." else "Move every encoded letter backward by the tuned offset, wrapping A to Z."
         EscapeStage.STORY -> if (systems.recorderChannel == null) "Share the waveform and strips. Your companion maps the waveform to a recorder channel." else "Order cause and effect: prevention, shelter, then rescue."
         EscapeStage.EXIT -> "Share the routing seal. Your companion maps it to a channel and arms the release; you turn the handle."
     }
@@ -542,6 +558,11 @@ class Escape(
         outcome == "ESCAPED" -> scenario.incident.escapeEpilogue
         outcome == "FAILED" -> scenario.incident.trappedEpilogue
         else -> listOf("You step back from the door.", "The room will wait for you.")
+    }
+    /** Remote systems act on what the human has shared, so a companion cannot guess its way through alone. */
+    private fun requireShared(objectId: String) {
+        val obj = objectList().first { it.id == objectId }
+        if (!obj.shared) fail("CLUE_NOT_SHARED", "Ask the human to inspect and share the ${obj.label.lowercase()} first.")
     }
     private fun requireStage(required: EscapeStage) { if (stage != required) fail("WRONG_STAGE", "Current objective: ${stage.name.lowercase()}.") }
     private fun active() { tick(); if (finished()) fail("ROOM_CLOSED", "The run is over.") }
